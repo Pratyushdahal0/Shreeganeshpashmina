@@ -24,7 +24,7 @@ export default function Header({
 
       <div className="announcementBar">
         <div className="announcementTrack">
-          <span>Free worldwide delivery on orders over USD $400</span>
+          <span>Worldwide delivery</span>
 
           <span aria-hidden="true">·</span>
 
