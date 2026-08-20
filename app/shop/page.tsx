@@ -1,4 +1,11 @@
-'use client';import {Suspense,useMemo,useState} from 'react';import {useSearchParams} from 'next/navigation';import {products,categories} from '@/lib/data';import ProductCard from '@/components/ProductCard';import Reveal from '@/components/Reveal';
-const occasionProductIds:Record<string,string[]>={Everyday:['1','2','3','4','5','6'],Formal:['1','4','5','6'],Party:['1','4','5','6'],Wedding:['1','5','6'],Winter:['1','2','3','4','5','6']};
-function ShopContent(){const [cat,setCat]=useState('All Pashmina');const searchParams=useSearchParams();const filter=searchParams.get('filter');const material=searchParams.get('material');const occasion=searchParams.get('occasion');const collection=filter==='new'?{eyebrow:'The latest collection',heading:'NEW ARRIVALS'}:filter==='best'?{eyebrow:'The collection',heading:'BEST SELLERS'}:{eyebrow:'The collection',heading:'Shop'};const shown=useMemo(()=>products.filter(p=>(cat==='All Pashmina'||p.category===cat)&&(!filter||(filter==='new'?p.new:filter==='best'?p.featured:true))&&(!material||p.material.includes(material))&&(!occasion||occasionProductIds[occasion]?.includes(p.id))),[cat,filter,material,occasion]);return <main className="productPage"><div className="container"><div className="sectionHead"><div><div className="eyebrow">{collection.eyebrow}</div><h1 className="serif" style={{fontWeight:400,fontSize:'clamp(48px,6vw,88px)',margin:'15px 0 0'}}>{collection.heading}</h1></div></div><div className="filters" style={{marginBottom:40}}>{categories.map(c=><button key={c} className={`filter ${cat===c?'active':''}`} onClick={()=>setCat(c)}>{c}</button>)}</div><div className="productGrid">{shown.map(p=><Reveal key={p.id}><ProductCard product={p}/></Reveal>)}</div></div></main>}
-export default function Shop(){return <Suspense><ShopContent/></Suspense>}
+import { Suspense } from "react";
+import ShopCatalogue from "@/components/ShopCatalogue";
+import { catalogue } from "@/lib/catalogue";
+export const dynamic = "force-dynamic";
+export default async function Shop() {
+  return (
+    <Suspense>
+      <ShopCatalogue products={await catalogue()} />
+    </Suspense>
+  );
+}

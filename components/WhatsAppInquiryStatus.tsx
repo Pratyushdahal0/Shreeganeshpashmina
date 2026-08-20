@@ -1,0 +1,4 @@
+"use client";
+import { useState } from "react";
+const statuses = ["NEW", "CONTACTED", "NEGOTIATING", "ORDER_CONFIRMED", "CONVERTED", "LOST", "CLOSED"];
+export default function WhatsAppInquiryStatus({ id, value }: { id: string; value: string }) { const [status, setStatus] = useState(value); const [busy, setBusy] = useState(false); async function change(next: string) { setStatus(next); setBusy(true); const response = await fetch(`/api/admin/whatsapp/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: next }) }); if (!response.ok) setStatus(value); setBusy(false); } return <select className="statusSelect" disabled={busy} value={status} onChange={(event) => change(event.target.value)}>{statuses.map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}</select>; }

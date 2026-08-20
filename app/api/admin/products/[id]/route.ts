@@ -1,0 +1,6 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/prisma";
+import { isAdmin } from "@/lib/admin";
+const schema = z.object({ name: z.string().min(1), slug: z.string().min(1), category: z.string().min(1), material: z.string().min(1), price: z.number().nonnegative(), image: z.string().min(1), description: z.string().min(1), featured: z.boolean(), isNew: z.boolean(), metaTitle: z.string().max(70).nullable(), metaDescription: z.string().max(160).nullable(), ogImageUrl: z.string().nullable(), keywords: z.array(z.string()), canonicalUrl: z.string().nullable() });
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) { if (!await isAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 }); const parsed = schema.safeParse(await request.json()); if (!parsed.success) return NextResponse.json({ error: 'Please review the product details.' }, { status: 400 }); const prisma = db(); if (!prisma) return NextResponse.json({ error: 'Database unavailable' }, { status: 503 }); try { const product = await prisma.product.update({ where: { id: (await params).id }, data: parsed.data }); return NextResponse.json(product); } catch { return NextResponse.json({ error: 'Could not save this product.' }, { status: 400 }); } }

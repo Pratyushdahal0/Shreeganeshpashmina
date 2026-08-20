@@ -1,0 +1,6 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { currentStaff } from "@/lib/admin";
+import { db } from "@/lib/prisma";
+const schema = z.object({ role: z.enum(["OWNER", "ADMIN", "MANAGER", "SALES", "INVENTORY", "CONTENT", "SUPPORT", "VIEWER"]) });
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) { const actor = await currentStaff(); if (!actor || actor.role !== "OWNER") return NextResponse.json({ error: "Only an owner may change staff roles." }, { status: 403 }); const parsed = schema.safeParse(await request.json()); const prisma = db(); if (!parsed.success || !prisma) return NextResponse.json({ error: "Invalid request." }, { status: 400 }); const id = (await params).id; const before = await prisma.user.findUnique({ where: { id } }); if (!before) return NextResponse.json({ error: "User not found." }, { status: 404 }); const user = await prisma.$transaction(async (tx) => { const next = await tx.user.update({ where: { id }, data: { role: parsed.data.role } }); await tx.auditLog.create({ data: { action: "UPDATE", entityType: "User", entityId: id, before: { role: before.role }, after: { role: next.role } } }); return next; }); return NextResponse.json(user); }

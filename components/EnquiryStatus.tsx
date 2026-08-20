@@ -1,0 +1,3 @@
+'use client';
+import { useState } from 'react';
+export default function EnquiryStatus({ id, value }: { id: string; value: 'NEW' | 'CONTACTED' | 'CLOSED' }) { const [status, setStatus] = useState(value); async function update(next: typeof status) { setStatus(next); await fetch(`/api/admin/enquiries/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: next }) }); } return <select className="field" value={status} onChange={(event) => update(event.target.value as typeof status)}><option value="NEW">New</option><option value="CONTACTED">Contacted</option><option value="CLOSED">Closed</option></select>; }

@@ -1,0 +1,102 @@
+
+> shree-ganesh-pashmina@1.0.0 dev
+> next dev
+
+   ▲ Next.js 15.5.23
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.18.111:3000
+   - Environments: .env
+
+ ✓ Starting...
+ ✓ Ready in 2.2s
+ ○ Compiling / ...
+ ⚠ ./app/globals.css.webpack[javascript/auto]!=!./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!./app/globals.css
+Warning
+
+(38:57) autoprefixer: end value has mixed support, consider using flex-end instead
+
+Import trace for requested module:
+./app/globals.css.webpack[javascript/auto]!=!./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!./app/globals.css
+./app/globals.css
+(node:25604) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+<w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/modules|C:\Users\acer\OneDrive\project\Shreeganeshpashmina\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[2]!C:\Users\acer\OneDrive\project\Shreeganeshpashmina\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??ruleSet[1].rules[14].oneOf[10].use[3]!C:\Users\acer\OneDrive\project\Shreeganeshpashmina\app\globals.css': No serializer registered for Warning
+<w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> webpack/lib/NormalModule -> Array { 1 items } -> webpack/lib/ModuleWarning -> Warning
+ GET / 200 in 10815ms
+ GET / 200 in 2396ms
+ ⚠ ./app/globals.css.webpack[javascript/auto]!=!./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!./app/globals.css
+Warning
+
+(38:57) autoprefixer: end value has mixed support, consider using flex-end instead
+
+Import trace for requested module:
+./app/globals.css.webpack[javascript/auto]!=!./node_modules/next/dist/build/webpack/loaders/css-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[2]!./node_modules/next/dist/build/webpack/loaders/postcss-loader/src/index.js??ruleSet[1].rules[14].oneOf[10].use[3]!./app/globals.css
+./app/globals.css
+ ✓ Compiled /login in 2.8s (1927 modules)
+ GET /login 200 in 2093ms
+ GET /login 200 in 42ms
+ GET /api/banners/home-hero 200 in 4001ms
+[next-auth][warn][NO_SECRET] 
+https://next-auth.js.org/warnings#no_secret
+ GET /api/auth/session 200 in 4305ms
+ GET /api/banners/home-editorial 200 in 5522ms
+ ✓ Compiled /api/account-exists in 417ms (1929 modules)
+ POST /api/account-exists 200 in 2815ms
+[next-auth][warn][NO_SECRET] 
+https://next-auth.js.org/warnings#no_secret
+ GET /api/auth/providers 200 in 125ms
+ GET /api/auth/csrf 200 in 41ms
+ POST /api/auth/callback/credentials 200 in 554ms
+ GET /api/auth/session 200 in 53ms
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 860ms (223 modules)
+[next-auth][error][NO_SECRET] 
+https://next-auth.js.org/errors#no_secret
+ GET /api/auth/error?error=Configuration 500 in 33ms
+ GET /api/auth/error?error=Configuration 500 in 30ms
+ GET /api/auth/error?error=Configuration 500 in 35ms
+ GET /login 200 in 422ms
+ GET /api/auth/session 200 in 46ms
+[next-auth][error][NO_SECRET] 
+https://next-auth.js.org/errors#no_secret
+   Reload env: .env
+ ✓ Compiled in 496ms (1795 modules)
+ GET /login 200 in 236ms
+ ✓ Compiled in 471ms (1795 modules)
+ GET /login 200 in 135ms
+ ✓ Compiled /api/account-exists in 385ms (969 modules)
+ POST /api/account-exists 200 in 3958ms
+ ✓ Compiled /api/auth/[...nextauth] in 303ms (1207 modules)
+ GET /api/auth/providers 200 in 1636ms
+ GET /api/auth/csrf 200 in 255ms
+ POST /api/auth/callback/credentials 200 in 820ms
+ GET /api/auth/session 200 in 285ms
+[next-auth][error][NO_SECRET] 
+https://next-auth.js.org/errors#no_secret
+ GET /api/auth/error?error=Configuration 500 in 241ms
+ GET /api/auth/error?error=Configuration 500 in 236ms
+ GET /api/auth/error?error=Configuration 500 in 248ms
+ ✓ Compiled in 273ms (2139 modules)
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1020ms (1921 modules)
+ GET /api/auth/error?error=Configuration 404 in 1556ms
+ GET /login 200 in 124ms
+ GET /login 200 in 81ms
+ GET /login 200 in 99ms
+ ✓ Compiled / in 267ms (1219 modules)
+ GET / 200 in 2537ms
+ GET / 200 in 351ms
+ GET / 200 in 367ms
+ GET / 200 in 2066ms
+ GET /api/auth/session 200 in 277ms
+ ○ Compiling /api/banners/[sectionKey] ...
+ ✓ Compiled /api/banners/[sectionKey] in 807ms (1219 modules)
+ GET /api/banners/home-editorial 200 in 1250ms
+ GET /api/banners/home-hero 200 in 3286ms

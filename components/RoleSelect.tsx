@@ -1,0 +1,4 @@
+"use client";
+import { useState } from "react";
+const roles = ["OWNER", "ADMIN", "MANAGER", "SALES", "INVENTORY", "CONTENT", "SUPPORT", "VIEWER"];
+export default function RoleSelect({ id, role, canEdit }: { id: string; role: string; canEdit: boolean }) { const [value, setValue] = useState(role); const [notice, setNotice] = useState(""); async function change(next: string) { setValue(next); const response = await fetch(`/api/admin/users/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ role: next }) }); if (!response.ok) { setValue(role); setNotice("Not saved"); } } if (!canEdit) return <span className="status">{role}</span>; return <><select className="statusSelect" value={value} onChange={(event) => change(event.target.value)}>{roles.map((item) => <option key={item}>{item}</option>)}</select>{notice && <span className="formError">{notice}</span>}</>; }

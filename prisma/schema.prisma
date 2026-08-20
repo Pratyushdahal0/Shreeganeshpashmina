@@ -1,0 +1,613 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  OWNER
+  ADMIN
+  MANAGER
+  SALES
+  INVENTORY
+  FACTORY
+  CONTENT
+  SUPPORT
+  VIEWER
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+enum InventoryMovementType {
+  PURCHASE
+  SALE
+  RETURN
+  ADJUSTMENT
+  DAMAGE
+  PRODUCTION
+  TRANSFER
+  RESERVATION
+  RELEASE
+}
+enum OrderStatus {
+  PENDING
+  PAYMENT_PENDING
+  PAID
+  PROCESSING
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUND_REQUESTED
+  REFUNDED
+}
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+enum FulfillmentStatus {
+  UNFULFILLED
+  PARTIAL
+  FULFILLED
+  SHIPPED
+  DELIVERED
+  RETURNED
+}
+enum OrderSource {
+  WEBSITE
+  WHATSAPP
+  WHOLESALE
+  ADMIN
+}
+enum WhatsAppInquiryStatus {
+  NEW
+  CONTACTED
+  NEGOTIATING
+  ORDER_CONFIRMED
+  CONVERTED
+  LOST
+  CLOSED
+}
+enum AuditAction {
+  CREATE
+  UPDATE
+  ARCHIVE
+  RESTORE
+  STATUS_CHANGE
+  INVENTORY_ADJUSTMENT
+}
+enum WholesaleLeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  QUOTATION_SENT
+  NEGOTIATING
+  WON
+  LOST
+}
+enum ProductionStatus {
+  PLANNED
+  MATERIALS_REQUIRED
+  IN_PRODUCTION
+  QUALITY_CHECK
+  COMPLETED
+  CANCELLED
+}
+enum QualityResult {
+  PENDING
+  PASSED
+  FAILED
+}
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  RECEIVED
+  REFUNDED
+  CLOSED
+}
+enum NotificationType {
+  ORDER
+  PAYMENT_FAILURE
+  LOW_STOCK
+  WHATSAPP
+  WHOLESALE
+  RETURN
+  PRODUCTION
+  REVIEW
+}
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum EnquiryType {
+  CART
+  PRODUCT
+  CONTACT
+}
+
+enum EnquiryStatus {
+  NEW
+  CONTACTED
+  CLOSED
+}
+
+enum BannerDisplayMode {
+  TEXT_ONLY
+  IMAGE_ONLY
+  TEXT_OVER_IMAGE
+}
+
+model User {
+  id String @id @default(cuid())
+  name String
+  email String @unique
+  passwordHash String
+  role Role @default(CUSTOMER)
+  createdAt DateTime @default(now())
+  inventoryMovements InventoryMovement[]
+  auditLogs AuditLog[]
+}
+
+model Product {
+  id String @id @default(cuid())
+  slug String @unique
+  name String
+  category String
+  material String
+  price Float
+  image String
+  description String
+  featured Boolean @default(false)
+  isNew Boolean @default(false)
+  metaTitle String?
+  metaDescription String?
+  ogImageUrl String?
+  keywords String[] @default([])
+  canonicalUrl String?
+  sku String? @unique
+  status ProductStatus @default(DRAFT)
+  shortDescription String?
+  priceMinor Int?
+  compareAtPriceMinor Int?
+  costPriceMinor Int?
+  currency String @default("NPR")
+  trackInventory Boolean @default(true)
+  allowBackorder Boolean @default(false)
+  lowStockThreshold Int @default(5)
+  publishedAt DateTime?
+  archivedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  variants ProductVariant[]
+  images ProductImage[]
+  collections ProductCollection[]
+  orderItems OrderItem[]
+  whatsAppInquiries WhatsAppInquiry[]
+}
+
+model ProductVariant {
+  id String @id @default(cuid())
+  productId String
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku String @unique
+  title String
+  attributes Json?
+  priceMinor Int?
+  compareAtPriceMinor Int?
+  imageUrl String?
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  inventory InventoryItem?
+  orderItems OrderItem[]
+}
+
+model ProductImage {
+  id String @id @default(cuid())
+  productId String
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url String
+  altText String?
+  position Int @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Collection {
+  id String @id @default(cuid())
+  name String
+  slug String @unique
+  description String?
+  imageUrl String?
+  isActive Boolean @default(true)
+  featured Boolean @default(false)
+  metaTitle String?
+  metaDescription String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  products ProductCollection[]
+}
+
+model ProductCollection {
+  productId String
+  collectionId String
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  position Int @default(0)
+  @@id([productId, collectionId])
+}
+
+model InventoryItem {
+  id String @id @default(cuid())
+  variantId String @unique
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  onHand Int @default(0)
+  reserved Int @default(0)
+  updatedAt DateTime @updatedAt
+  movements InventoryMovement[]
+}
+
+model InventoryMovement {
+  id String @id @default(cuid())
+  inventoryItemId String
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  type InventoryMovementType
+  quantity Int
+  reference String?
+  note String?
+  userId String?
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  @@index([inventoryItemId, createdAt])
+}
+
+model Customer {
+  id String @id @default(cuid())
+  name String
+  email String? @unique
+  phone String? @unique
+  country String?
+  tags String[] @default([])
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  addresses Address[]
+  orders Order[]
+}
+
+model Address {
+  id String @id @default(cuid())
+  customerId String
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  label String?
+  recipient String
+  line1 String
+  line2 String?
+  city String
+  state String?
+  postalCode String?
+  country String
+  phone String?
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id String @id @default(cuid())
+  orderNumber String @unique
+  customerId String?
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  source OrderSource @default(WEBSITE)
+  status OrderStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+  fulfillmentStatus FulfillmentStatus @default(UNFULFILLED)
+  currency String @default("NPR")
+  subtotalMinor Int @default(0)
+  discountMinor Int @default(0)
+  shippingMinor Int @default(0)
+  taxMinor Int @default(0)
+  totalMinor Int @default(0)
+  internalNote String?
+  shippingAddress Json?
+  billingAddress Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  items OrderItem[]
+  payments Payment[]
+  statusHistory OrderStatusHistory[]
+  convertedWhatsAppInquiry WhatsAppInquiry?
+  returnRequests ReturnRequest[]
+  @@index([status, createdAt])
+}
+
+model OrderItem {
+  id String @id @default(cuid())
+  orderId String
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variantId String?
+  variant ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  title String
+  sku String?
+  quantity Int
+  unitPriceMinor Int
+  totalMinor Int
+}
+
+model OrderStatusHistory {
+  id String @id @default(cuid())
+  orderId String
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status OrderStatus
+  note String?
+  isCustomerVisible Boolean @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id String @id @default(cuid())
+  orderId String
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider String
+  reference String? @unique
+  amountMinor Int
+  currency String
+  status PaymentStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Enquiry {
+  id String @id @default(cuid())
+  type EnquiryType
+  customerName String
+  customerEmail String?
+  customerPhone String?
+  productIds String[] @default([])
+  message String?
+  currency String
+  region String?
+  status EnquiryStatus @default(NEW)
+  createdAt DateTime @default(now())
+}
+
+model WhatsAppInquiry {
+  id String @id @default(cuid())
+  customerName String?
+  phone String
+  email String?
+  productId String?
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  convertedOrderId String? @unique
+  convertedOrder Order? @relation(fields: [convertedOrderId], references: [id], onDelete: SetNull)
+  variantId String?
+  quantity Int?
+  message String?
+  status WhatsAppInquiryStatus @default(NEW)
+  assignedToId String?
+  notes String?
+  followUpAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([status, createdAt])
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+  userId String?
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action AuditAction
+  entityType String
+  entityId String
+  before Json?
+  after Json?
+  createdAt DateTime @default(now())
+  @@index([entityType, entityId, createdAt])
+}
+
+model StoreSetting {
+  key String @id
+  value Json
+  updatedAt DateTime @updatedAt
+}
+
+model WholesaleLead {
+  id String @id @default(cuid())
+  companyName String
+  contactName String
+  email String?
+  phone String?
+  country String?
+  businessType String?
+  website String?
+  productInterests String[] @default([])
+  estimatedQuantity Int?
+  budgetMinor Int?
+  currency String @default("NPR")
+  status WholesaleLeadStatus @default(NEW)
+  notes String?
+  followUpAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Supplier {
+  id String @id @default(cuid())
+  name String
+  email String?
+  phone String?
+  address String?
+  notes String?
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  materials Material[]
+}
+model Material {
+  id String @id @default(cuid())
+  name String
+  sku String? @unique
+  unit String
+  onHand Decimal @default(0)
+  reorderPoint Decimal?
+  supplierId String?
+  supplier Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model ProductionOrder {
+  id String @id @default(cuid())
+  reference String @unique
+  variantId String?
+  quantity Int
+  status ProductionStatus @default(PLANNED)
+  startedAt DateTime?
+  expectedCompletionAt DateTime?
+  completedAt DateTime?
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  qualityChecks QualityCheck[]
+}
+model QualityCheck {
+  id String @id @default(cuid())
+  productionOrderId String
+  productionOrder ProductionOrder @relation(fields: [productionOrderId], references: [id], onDelete: Cascade)
+  result QualityResult @default(PENDING)
+  inspector String?
+  notes String?
+  createdAt DateTime @default(now())
+}
+model Review {
+  id String @id @default(cuid())
+  productId String
+  customerName String
+  rating Int
+  body String
+  verifiedPurchase Boolean @default(false)
+  status ReviewStatus @default(PENDING)
+  featured Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@index([productId, status])
+}
+model Discount {
+  id String @id @default(cuid())
+  code String @unique
+  type DiscountType
+  valueMinor Int
+  minimumOrderMinor Int?
+  startsAt DateTime?
+  endsAt DateTime?
+  usageLimit Int?
+  usageCount Int @default(0)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model ShippingZone {
+  id String @id @default(cuid())
+  name String
+  countries String[] @default([])
+  isActive Boolean @default(true)
+  methods ShippingMethod[]
+}
+model ShippingMethod {
+  id String @id @default(cuid())
+  zoneId String
+  zone ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+  name String
+  priceMinor Int
+  currency String @default("NPR")
+  estimatedDays String?
+  isActive Boolean @default(true)
+}
+model ReturnRequest {
+  id String @id @default(cuid())
+  orderId String
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  reason String
+  status ReturnStatus @default(REQUESTED)
+  refundMinor Int?
+  notes String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model Notification {
+  id String @id @default(cuid())
+  type NotificationType
+  title String
+  body String?
+  href String?
+  readAt DateTime?
+  createdAt DateTime @default(now())
+}
+model MediaAsset {
+  id String @id @default(cuid())
+  url String @unique
+  altText String?
+  mimeType String?
+  sizeBytes Int?
+  createdAt DateTime @default(now())
+}
+model Page {
+  id String @id @default(cuid())
+  slug String @unique
+  title String
+  body String
+  status ContentStatus @default(DRAFT)
+  metaTitle String?
+  metaDescription String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+model BlogPost {
+  id String @id @default(cuid())
+  slug String @unique
+  title String
+  excerpt String?
+  body String
+  author String?
+  featuredImageUrl String?
+  status ContentStatus @default(DRAFT)
+  publishedAt DateTime?
+  metaTitle String?
+  metaDescription String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Banner {
+  id String @id @default(cuid())
+  sectionKey String @unique
+  displayMode BannerDisplayMode
+  eyebrow String?
+  headline String?
+  subheadline String?
+  bodyText String?
+  imageUrl String?
+  order Int @default(0)
+  isActive Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

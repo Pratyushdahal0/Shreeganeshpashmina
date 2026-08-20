@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { db } from "@/lib/prisma";
+import { isAdmin } from "@/lib/admin";
+
+const schema = z.object({ status: z.enum(["NEW", "CONTACTED", "NEGOTIATING", "ORDER_CONFIRMED", "CONVERTED", "LOST", "CLOSED"]), notes: z.string().trim().max(2000).optional(), followUpAt: z.string().datetime().optional().nullable() });
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) { if (!await isAdmin()) return NextResponse.json({ error: "Forbidden" }, { status: 403 }); const parsed = schema.safeParse(await request.json()); if (!parsed.success) return NextResponse.json({ error: "Invalid WhatsApp update." }, { status: 400 }); const prisma = db(); if (!prisma) return NextResponse.json({ error: "Database unavailable." }, { status: 503 }); const before = await prisma.whatsAppInquiry.findUnique({ where: { id: (await params).id } }); if (!before) return NextResponse.json({ error: "Inquiry not found." }, { status: 404 }); const updated = await prisma.$transaction(async (tx) => { const item = await tx.whatsAppInquiry.update({ where: { id: before.id }, data: { status: parsed.data.status, notes: parsed.data.notes, followUpAt: parsed.data.followUpAt ? new Date(parsed.data.followUpAt) : null } }); await tx.auditLog.create({ data: { action: "STATUS_CHANGE", entityType: "WhatsAppInquiry", entityId: item.id, before: { status: before.status }, after: { status: item.status } } }); return item; }); return NextResponse.json(updated); }
