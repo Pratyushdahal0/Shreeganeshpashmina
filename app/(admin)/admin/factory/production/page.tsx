@@ -1,0 +1,1 @@
+import{FactoryList}from'@/components/admin/factory/Factory';export default function ProductionPage(){return <FactoryList title="Production orders" text="Production orders will link products, variants, quantities, materials, assigned staff, dates, stages, and inventory references."/>}

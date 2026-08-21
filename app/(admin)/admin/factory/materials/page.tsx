@@ -1,0 +1,1 @@
+import{FactoryList}from'@/components/admin/factory/Factory';export default function MaterialsPage(){return <FactoryList title="Materials" text="Materials will include codes, quantities, units, supplier links, stock where available, and cost."/>}

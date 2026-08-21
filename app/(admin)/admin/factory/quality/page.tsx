@@ -1,0 +1,1 @@
+import{FactoryList}from'@/components/admin/factory/Factory';export default function QualityPage(){return <FactoryList title="Quality control" text="Checks will link products and production orders with inspector, date, result, notes, and supported images."/>}

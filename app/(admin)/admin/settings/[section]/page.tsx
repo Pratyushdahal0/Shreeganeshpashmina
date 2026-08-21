@@ -1,0 +1,1 @@
+import{SettingsDetail}from'@/components/admin/settings/Settings';export default async function SettingsSection({params}:{params:Promise<{section:string}>}){return <SettingsDetail section={(await params).section}/>}

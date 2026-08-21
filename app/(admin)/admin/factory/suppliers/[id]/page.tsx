@@ -1,0 +1,1 @@
+import{FactoryList}from'@/components/admin/factory/Factory';export default function SupplierDetail(){return <FactoryList title="Supplier detail" text="No supplier record can be loaded until the factory backend is connected."/>}

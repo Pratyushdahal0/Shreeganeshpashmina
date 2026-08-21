@@ -1,0 +1,1 @@
+import{FactoryList}from'@/components/admin/factory/Factory';export default function QualityDetail(){return <FactoryList title="Quality check" text="No quality-control record can be loaded until the factory backend is connected."/>}

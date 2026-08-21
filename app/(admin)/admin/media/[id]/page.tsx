@@ -1,0 +1,1 @@
+import{ContentDetail}from'@/components/admin/content/Content';export default async function MediaDetail({params}:{params:Promise<{id:string}>}){return <ContentDetail section={`media ${(await params).id}`}/>}

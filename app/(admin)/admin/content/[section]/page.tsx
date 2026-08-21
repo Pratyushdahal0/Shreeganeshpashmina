@@ -1,0 +1,1 @@
+import{ContentDetail}from'@/components/admin/content/Content';export default async function ContentSection({params}:{params:Promise<{section:string}>}){return <ContentDetail section={(await params).section}/>}

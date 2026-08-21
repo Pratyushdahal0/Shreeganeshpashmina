@@ -130,6 +130,8 @@ export default function Header({
 
           <button
             className="iconBtn mobileMenuBtn"
+            aria-label={mobile ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobile}
             onClick={() => setMobile((v) => !v)}
           >
             <Icon name={mobile ? 'x' : 'bars'} />
@@ -338,6 +340,7 @@ export default function Header({
 
                 <button
                   className="iconBtn"
+                  aria-label="Close search"
                   onClick={() => setSearch(false)}
                 >
                   <Icon name="x" />

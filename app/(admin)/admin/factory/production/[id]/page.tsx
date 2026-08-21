@@ -1,0 +1,1 @@
+import{FactoryList}from'@/components/admin/factory/Factory';export default function ProductionDetail(){return <FactoryList title="Production order" text="No production-order record can be loaded until the factory backend is connected."/>}

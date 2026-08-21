@@ -1,0 +1,1 @@
+import{FactoryList}from'@/components/admin/factory/Factory';export default function MaterialDetail(){return <FactoryList title="Material detail" text="No material record or inventory adjustment can be loaded until the factory backend is connected."/>}

@@ -1,0 +1,1 @@
+import{FactoryList}from'@/components/admin/factory/Factory';export default function SuppliersPage(){return <FactoryList title="Suppliers" text="Suppliers will hold company, contact, communication, supplied materials, notes, and operational status."/>}

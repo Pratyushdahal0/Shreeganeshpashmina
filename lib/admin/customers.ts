@@ -1,0 +1,7 @@
+export type CustomerSegment = 'new' | 'returning' | 'high_value' | 'inactive' | 'wholesale' | 'whatsapp_customer';
+export type CustomerAddress = { id: string; label: string; recipient: string; line1: string; line2?: string; city: string; country: string; postalCode?: string };
+export type Customer = { id: string; name: string; email: string | null; phone: string | null; country: string | null; addresses: CustomerAddress[]; totalOrders: number | null; totalSpending: number | null; averageOrderValue: number | null; lastOrderAt: string | null; source: 'website' | 'whatsapp' | 'wholesale' | 'manual' | null; tags: string[]; notes: string[]; segments: CustomerSegment[] };
+export type CustomerMutationResult = { ok: false; reason: 'persistence_unavailable'; message: string };
+export interface CustomerService { list(query?: string): Promise<{ state: 'unavailable' | 'live'; customers: Customer[] }>; get(id: string): Promise<Customer | null>; addNote(id: string, note: string): Promise<CustomerMutationResult>; setTags(id: string, tags: string[]): Promise<CustomerMutationResult>; }
+const unavailable = (): CustomerMutationResult => ({ ok: false, reason: 'persistence_unavailable', message: 'Customer data is not connected; no note or tag change was saved.' });
+export const customerService: CustomerService = { async list() { return { state: 'unavailable', customers: [] }; }, async get() { return null; }, async addNote() { return unavailable(); }, async setTags() { return unavailable(); } };

@@ -1,0 +1,1 @@
+import{ContentDetail}from'@/components/admin/content/Content';export default async function JournalDetail({params}:{params:Promise<{id:string}>}){return <ContentDetail section={`article ${(await params).id}`}/>}

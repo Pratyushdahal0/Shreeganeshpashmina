@@ -1,0 +1,8 @@
+export type InventoryMovementType = 'purchase' | 'sale' | 'return' | 'manual_adjustment' | 'damaged' | 'production' | 'transfer';
+export type InventoryRecord = { id: string; productId: string; variantId: string | null; currentStock: number | null; availableStock: number | null; reservedStock: number | null; lowStockThreshold: number | null; status: 'unavailable' | 'low_stock' | 'out_of_stock' | 'in_stock' };
+export type InventoryMovement = { id: string; inventoryId: string; quantity: number; type: InventoryMovementType; reason: string; user: string; timestamp: string; reference: string };
+export type InventoryAdjustment = { inventoryId: string; quantity: number; type: InventoryMovementType; reason: string; reference: string };
+export type InventoryMutationResult = { ok: false; reason: 'persistence_unavailable'; message: string };
+export interface InventoryService { list(): Promise<{ state: 'unavailable' | 'live'; records: InventoryRecord[] }>; history(inventoryId: string): Promise<InventoryMovement[]>; adjust(input: InventoryAdjustment): Promise<InventoryMutationResult>; bulkAdjust(inputs: InventoryAdjustment[]): Promise<InventoryMutationResult>; setLowStockThreshold(inventoryId: string, threshold: number): Promise<InventoryMutationResult>; }
+const unavailable = (): InventoryMutationResult => ({ ok: false, reason: 'persistence_unavailable', message: 'Inventory changes require a connected inventory service; no stock adjustment was recorded.' });
+export const inventoryService: InventoryService = { async list() { return { state: 'unavailable', records: [] }; }, async history() { return []; }, async adjust() { return unavailable(); }, async bulkAdjust() { return unavailable(); }, async setLowStockThreshold() { return unavailable(); } };
