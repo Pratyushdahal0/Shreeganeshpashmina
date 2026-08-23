@@ -10,15 +10,166 @@ const asInput = (product?: AdminProduct): ProductInput => ({ name: product?.name
 const toSlug = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
 
 export default function ProductEditor({ product }: Props) {
-  const [form, setForm] = useState<ProductInput>(asInput(product)); const [message, setMessage] = useState<string | null>(null); const [errors, setErrors] = useState<Record<string, string>>({});
+  const [form, setForm] = useState<ProductInput>(asInput(product)); 
+  const [message, setMessage] = useState<string | null>(null); 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  
   const update = (key: keyof ProductInput, value: string | number) => setForm((current) => ({ ...current, [key]: value }));
-  const save = async () => { const nextErrors: Record<string, string> = {}; if (!form.name.trim()) nextErrors.name = 'Product name is required.'; if (!form.slug.trim()) nextErrors.slug = 'A URL slug is required.'; if (form.price === undefined || Number.isNaN(Number(form.price))) nextErrors.price = 'Regular price is required.'; setErrors(nextErrors); if (Object.keys(nextErrors).length) return; const result = product ? await productService.update(product.id, form) : await productService.create(form); setMessage(result.message); };
-  const operation = async (action: 'duplicate' | 'archive' | 'restore' | 'publish' | 'unpublish') => { if (!product) return; const result = await productService[action](product.id); setMessage(result.message); };
-  return <section className="adminEditor" aria-labelledby="product-editor-title"><div className="adminProductsIntro"><div><p className="adminEyebrow">Catalogue / {product ? 'Edit' : 'Create'}</p><h1 id="product-editor-title">{product ? product.name : 'Create product'}</h1><p>{product ? 'This product is read from the existing static storefront catalogue.' : 'Add a product once a persistent catalogue service is connected.'}</p></div><Link href="/admin/products" className="adminSecondaryAction">Back to products</Link></div>
-    <div className="adminNotice"><div><strong>Saving is unavailable</strong><span>{product ? 'Edits and lifecycle actions are prepared but cannot modify the static catalogue.' : 'This form validates input but cannot create a product until persistence is connected.'}</span></div><span className="adminNoticeTag">No persistence</span></div>
-    {message && <div className="adminFormMessage" role="status">{message}</div>}
-    <div className="adminEditorLayout"><div className="adminEditorFields"><EditorSection title="Basic information"><Field label="Product name" error={errors.name}><input value={form.name} onChange={(event) => { update('name', event.target.value); if (!product) update('slug', toSlug(event.target.value)); }} /></Field><Field label="Slug" hint="Used by /product/[slug]" error={errors.slug}><input value={form.slug} onChange={(event) => update('slug', toSlug(event.target.value))} /></Field><Field label="SKU / product code" hint="Not available in the current catalogue"><input value={form.sku} onChange={(event) => update('sku', event.target.value)} /></Field><Field label="Category"><select value={form.category} onChange={(event) => update('category', event.target.value)}><option value="">Select category</option>{productCategories.map((item) => <option key={item}>{item}</option>)}</select></Field><Field label="Description"><textarea rows={5} value={form.description} onChange={(event) => update('description', event.target.value)} /></Field><Field label="Material"><input value={form.material} onChange={(event) => update('material', event.target.value)} /></Field></EditorSection><EditorSection title="Pricing"><Field label="Regular price (USD)" error={errors.price}><input type="number" min="0" value={form.price ?? ''} onChange={(event) => update('price', Number(event.target.value))} /></Field><Field label="Sale price" hint="Not available in the current storefront model"><input disabled placeholder="Requires catalogue service" /></Field><Field label="Compare-at price" hint="Not available in the current storefront model"><input disabled placeholder="Requires catalogue service" /></Field></EditorSection><EditorSection title="Media"><div className="adminMediaState"><strong>{product?.image ? 'Main storefront image available' : 'No media selected'}</strong><span>{product?.image ?? 'Image upload and gallery persistence need a media service.'}</span></div><p className="adminPanelFootnote">Gallery images and alt text are ready to be supplied by a future media provider. No upload is simulated.</p></EditorSection><EditorSection title="Variants"><div className="adminMediaState"><strong>No variant data configured</strong><span>The existing storefront model does not define color, size, SKU, or stock combinations.</span></div><p className="adminPanelFootnote">The product service reserves stable variant identities and attribute selections for a future catalogue API.</p></EditorSection><EditorSection title="SEO & shipping"><Field label="Meta title" hint="Not stored by the current model"><input disabled placeholder="Requires catalogue service" /></Field><Field label="Meta description" hint="Not stored by the current model"><textarea disabled rows={3} placeholder="Requires catalogue service" /></Field><Field label="Shipping details" hint="Weight, dimensions, and category are not stored"><input disabled placeholder="Requires catalogue service" /></Field></EditorSection></div><aside className="adminEditorAside"><div><p className="adminEyebrow">Status</p><h2>{product ? 'Product actions' : 'Create product'}</h2><p>{product ? 'Publication, archive, and stock status are unavailable without a product backend.' : 'Validate the product details before connecting a data source.'}</p><button type="button" className="adminPrimaryButton" onClick={save}>{product ? 'Save changes' : 'Create product'}</button>{product && <div className="adminLifecycle"><button type="button" onClick={() => operation('publish')}>Publish</button><button type="button" onClick={() => operation('unpublish')}>Unpublish</button><button type="button" onClick={() => operation('duplicate')}>Duplicate</button><button type="button" onClick={() => operation('archive')}>Archive</button><button type="button" onClick={() => operation('restore')}>Restore</button></div>}</div><div className="adminEditorMeta"><span>Publication</span><strong>Unavailable</strong><span>Stock</span><strong>Unavailable</strong><span>Last updated</span><strong>Unavailable</strong></div></aside></div></section>;
+  
+  const save = async () => { 
+    const nextErrors: Record<string, string> = {}; 
+    if (!form.name.trim()) nextErrors.name = 'Product name is required.'; 
+    if (!form.slug.trim()) nextErrors.slug = 'A URL slug is required.'; 
+    if (form.price === undefined || Number.isNaN(Number(form.price))) nextErrors.price = 'Regular price is required.'; 
+    
+    setErrors(nextErrors); 
+    if (Object.keys(nextErrors).length) return; 
+    
+    const result = product ? await productService.update(product.id, form) : await productService.create(form); 
+    setMessage(result.message); 
+  };
+  
+  const operation = async (action: 'duplicate' | 'archive' | 'restore' | 'publish' | 'unpublish') => { 
+    if (!product) return; 
+    const result = await productService[action](product.id); 
+    setMessage(result.message); 
+  };
+  
+  return (
+    <section className="adminEditor" aria-labelledby="product-editor-title">
+      <div className="adminProductsIntro" style={{ paddingBottom: '16px', borderBottom: '1px solid var(--admin-line)' }}>
+        <div>
+          <p className="adminEyebrow">Catalogue / {product ? 'Edit Product' : 'Create Product'}</p>
+          <h1 id="product-editor-title" style={{ fontSize: '24px', margin: '4px 0 8px 0', fontWeight: 600 }}>{product ? product.name : 'Create product'}</h1>
+          <p style={{ margin: 0, color: 'var(--admin-muted)', fontSize: '14px' }}>{product ? 'This product is read from the existing static storefront catalogue.' : 'Add a product once a persistent catalogue service is connected.'}</p>
+        </div>
+        <Link href="/admin/products" className="adminSecondaryAction" style={{ borderRadius: 'var(--radius-md)', padding: '8px 16px', height: 'fit-content' }}>
+          Back to products
+        </Link>
+      </div>
+
+      <div className="adminNotice" style={{ margin: '8px 0', borderRadius: 'var(--radius-md)' }}>
+        <div>
+          <strong>Saving is unavailable</strong>
+          <span>{product ? 'Edits and lifecycle actions are prepared but cannot modify the static catalogue.' : 'This form validates input but cannot create a product until persistence is connected.'}</span>
+        </div>
+        <span className="adminNoticeTag">No persistence</span>
+      </div>
+      
+      {message && <div className="adminFormMessage" role="status" style={{ borderRadius: 'var(--radius-md)' }}>{message}</div>}
+      
+      <div className="adminEditorLayout">
+        <div className="adminEditorFields">
+          <EditorSection title="Basic information">
+            <Field label="Product name" error={errors.name}>
+              <input value={form.name} onChange={(event) => { update('name', event.target.value); if (!product) update('slug', toSlug(event.target.value)); }} />
+            </Field>
+            <Field label="Slug" hint="Used by /product/[slug]" error={errors.slug}>
+              <input value={form.slug} onChange={(event) => update('slug', toSlug(event.target.value))} />
+            </Field>
+            <Field label="SKU / product code" hint="Not available in the current catalogue">
+              <input value={form.sku} onChange={(event) => update('sku', event.target.value)} />
+            </Field>
+            <Field label="Category">
+              <select value={form.category} onChange={(event) => update('category', event.target.value)}>
+                <option value="">Select category</option>
+                {productCategories.map((item) => <option key={item}>{item}</option>)}
+              </select>
+            </Field>
+            <Field label="Description">
+              <textarea rows={5} value={form.description} onChange={(event) => update('description', event.target.value)} />
+            </Field>
+            <Field label="Material">
+              <input value={form.material} onChange={(event) => update('material', event.target.value)} />
+            </Field>
+          </EditorSection>
+
+          <EditorSection title="Pricing">
+            <Field label="Regular price (USD)" error={errors.price}>
+              <input type="number" min="0" value={form.price ?? ''} onChange={(event) => update('price', Number(event.target.value))} />
+            </Field>
+            <Field label="Sale price" hint="Not available in the current storefront model">
+              <input disabled placeholder="Requires catalogue service" />
+            </Field>
+            <Field label="Compare-at price" hint="Not available in the current storefront model">
+              <input disabled placeholder="Requires catalogue service" />
+            </Field>
+          </EditorSection>
+
+          <EditorSection title="Media">
+            <div className="adminMediaState" style={{ borderRadius: 'var(--radius-md)' }}>
+              <strong>{product?.image ? 'Main storefront image available' : 'No media selected'}</strong>
+              <span>{product?.image ?? 'Image upload and gallery persistence need a media service.'}</span>
+            </div>
+            <p className="adminPanelFootnote">Gallery images and alt text are ready to be supplied by a future media provider. No upload is simulated.</p>
+          </EditorSection>
+
+          <EditorSection title="Variants">
+            <div className="adminMediaState" style={{ borderRadius: 'var(--radius-md)' }}>
+              <strong>No variant data configured</strong>
+              <span>The existing storefront model does not define color, size, SKU, or stock combinations.</span>
+            </div>
+            <p className="adminPanelFootnote">The product service reserves stable variant identities and attribute selections for a future catalogue API.</p>
+          </EditorSection>
+
+          <EditorSection title="SEO & shipping">
+            <Field label="Meta title" hint="Not stored by the current model">
+              <input disabled placeholder="Requires catalogue service" />
+            </Field>
+            <Field label="Meta description" hint="Not stored by the current model">
+              <textarea disabled rows={3} placeholder="Requires catalogue service" />
+            </Field>
+            <Field label="Shipping details" hint="Weight, dimensions, and category are not stored">
+              <input disabled placeholder="Requires catalogue service" />
+            </Field>
+          </EditorSection>
+        </div>
+
+        <aside className="adminEditorAside">
+          <div style={{ borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}>
+            <p className="adminEyebrow">Status</p>
+            <h2 style={{ fontSize: '18px', margin: '4px 0 12px 0' }}>{product ? 'Product actions' : 'Create product'}</h2>
+            <p>{product ? 'Publication, archive, and stock status are unavailable without a product backend.' : 'Validate the product details before connecting a data source.'}</p>
+            <button type="button" className="adminPrimaryButton" onClick={save} style={{ borderRadius: 'var(--radius-md)', padding: '10px 16px', fontWeight: 500, fontSize: '13px' }}>
+              {product ? 'Save changes' : 'Create product'}
+            </button>
+            {product && (
+              <div className="adminLifecycle">
+                <button type="button" onClick={() => operation('publish')}>Publish</button>
+                <button type="button" onClick={() => operation('unpublish')}>Unpublish</button>
+                <button type="button" onClick={() => operation('duplicate')}>Duplicate</button>
+                <button type="button" onClick={() => operation('archive')}>Archive</button>
+                <button type="button" onClick={() => operation('restore')}>Restore</button>
+              </div>
+            )}
+          </div>
+          
+          <div className="adminEditorMeta" style={{ borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', padding: '20px', background: 'var(--admin-panel)', border: '1px solid var(--admin-line)' }}>
+            <span>Publication</span><strong>Unavailable</strong>
+            <span>Stock</span><strong>Unavailable</strong>
+            <span>Last updated</span><strong>Unavailable</strong>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
 }
 
-function EditorSection({ title, children }: { title: string; children: React.ReactNode }) { return <section className="adminEditorSection"><h2>{title}</h2><div className="adminFieldGrid">{children}</div></section>; }
-function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) { return <label className="adminField"><span>{label}</span>{children}{error ? <small className="adminFieldError">{error}</small> : hint && <small>{hint}</small>}</label>; }
+function EditorSection({ title, children }: { title: string; children: React.ReactNode }) { 
+  return (
+    <section className="adminEditorSection" style={{ borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', marginBottom: '16px' }}>
+      <h2 style={{ fontSize: '16px', fontWeight: 600, borderBottom: '1px solid var(--admin-line)', paddingBottom: '16px', marginBottom: '16px' }}>{title}</h2>
+      <div className="adminFieldGrid">{children}</div>
+    </section>
+  ); 
+}
+
+function Field({ label, hint, error, children }: { label: string; hint?: string; error?: string; children: React.ReactNode }) { 
+  return (
+    <label className="adminField">
+      <span>{label}</span>
+      {children}
+      {error ? <small className="adminFieldError">{error}</small> : hint && <small style={{ color: 'var(--admin-muted)' }}>{hint}</small>}
+    </label>
+  ); 
+}

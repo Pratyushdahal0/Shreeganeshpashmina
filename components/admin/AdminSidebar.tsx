@@ -1,5 +1,105 @@
-import Link from 'next/link';
+'use client';
 
-export default function AdminSidebar(){
-  return <aside className="adminSidebar"><div><p className="adminWordmark">Shree Ganesh Pashmina<span>Admin / Backoffice</span></p></div><nav className="adminNav" aria-label="Admin navigation"><p className="adminSidebarLabel">Workspace</p><Link href="/admin">Overview</Link><Link href="/admin/analytics">Analytics & reports</Link><Link href="/admin/products">Products</Link><Link href="/admin/collections">Collections</Link><Link href="/admin/inventory">Inventory</Link><Link href="/admin/orders">Orders</Link><Link href="/admin/customers">Customers</Link><Link href="/admin/whatsapp">WhatsApp</Link><Link href="/admin/wholesale">Wholesale</Link><Link href="/admin/payments">Payments</Link><Link href="/admin/shipping">Shipping</Link><Link href="/admin/returns">Returns</Link><Link href="/admin/factory">Factory</Link><Link href="/admin/content">Content</Link><Link href="/admin/media">Media library</Link><Link href="/admin/reviews">Reviews</Link><Link href="/admin/discounts">Discounts</Link><Link href="/admin/notifications">Notifications</Link><Link href="/admin/audit-logs">Audit logs</Link><Link href="/admin/settings">Settings & integrations</Link><Link href="/admin/users">Users & permissions</Link></nav><div><p className="adminSidebarLabel">Catalogue source</p><p className="adminSidebarStatus">Products and categories are read from the existing static storefront catalogue.</p></div></aside>;
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
+const navGroups = [
+  {
+    label: 'Overview',
+    items: [{ label: 'Dashboard', href: '/admin' }],
+  },
+  {
+    label: 'Commerce',
+    items: [
+      { label: 'Orders', href: '/admin/orders' },
+      { label: 'Products', href: '/admin/products' },
+      { label: 'Collections', href: '/admin/collections' },
+      { label: 'Inventory', href: '/admin/inventory' },
+      { label: 'Customers', href: '/admin/customers' },
+      { label: 'Discounts', href: '/admin/discounts' },
+      { label: 'Reviews', href: '/admin/reviews' },
+    ],
+  },
+  {
+    label: 'Sales Channels',
+    items: [
+      { label: 'WhatsApp', href: '/admin/whatsapp' },
+      { label: 'Wholesale / B2B', href: '/admin/wholesale' },
+    ],
+  },
+  {
+    label: 'Manufacturing',
+    items: [
+      { label: 'Factory', href: '/admin/factory' },
+    ],
+  },
+  {
+    label: 'Content',
+    items: [
+      { label: 'Content Management', href: '/admin/content' },
+      { label: 'Media Library', href: '/admin/media' },
+      { label: 'Journal', href: '/admin/journal' },
+    ],
+  },
+  {
+    label: 'Operations',
+    items: [
+      { label: 'Payments', href: '/admin/payments' },
+      { label: 'Shipping', href: '/admin/shipping' },
+      { label: 'Returns', href: '/admin/returns' },
+      { label: 'Notifications', href: '/admin/notifications' },
+    ],
+  },
+  {
+    label: 'Analytics',
+    items: [
+      { label: 'Sales & Reports', href: '/admin/analytics' },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
+      { label: 'Settings', href: '/admin/settings' },
+      { label: 'Users & Roles', href: '/admin/users' },
+      { label: 'Audit Logs', href: '/admin/audit-logs' },
+    ],
+  },
+];
+
+export default function AdminSidebar() {
+  const pathname = usePathname();
+
+  return (
+    <aside className="adminSidebar">
+      <div>
+        <p className="adminWordmark">
+          Shree Ganesh Pashmina<span>Admin / Backoffice</span>
+        </p>
+      </div>
+      <nav className="adminNav" aria-label="Admin navigation">
+        {navGroups.map((group) => (
+          <div key={group.label} className="adminNavGroup">
+            <p className="adminSidebarLabel">{group.label}</p>
+            {group.items.map((item) => {
+              const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={isActive ? 'isActive' : ''}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+      <div>
+        <p className="adminSidebarLabel">Catalogue source</p>
+        <p className="adminSidebarStatus">Products and categories are read from the existing static storefront catalogue.</p>
+      </div>
+    </aside>
+  );
 }
