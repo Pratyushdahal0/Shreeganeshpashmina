@@ -1,27 +1,53 @@
 'use client';
-import { useState } from 'react';
-import type { DashboardDatePreset } from '@/lib/admin/dashboard';
+import { useEffect, useState, useTransition } from 'react';
+import { getSalesAnalytics, getOrdersCsv, type DatePreset } from '@/lib/actions/analytics';
 
-const periods: { value: DashboardDatePreset; label: string }[] = [
-  { value: 'today', label: 'Today' }, { value: 'yesterday', label: 'Yesterday' },
-  { value: 'last7days', label: '7 days' }, { value: 'last30days', label: '30 days' },
-  { value: 'last90days', label: '90 days' }, { value: 'thisYear', label: 'This year' },
+type AnalyticsData = Awaited<ReturnType<typeof getSalesAnalytics>>;
+
+const periods: { value: DatePreset; label: string }[] = [
+  { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
+  { value: 'last7days', label: '7 days' },
+  { value: 'last30days', label: '30 days' },
+  { value: 'last90days', label: '90 days' },
+  { value: 'thisYear', label: 'This year' },
 ];
 
-const reports = ['Sales report', 'Orders report', 'Inventory report', 'Product performance', 'Customer report', 'Wholesale report', 'WhatsApp report'];
-
-function Empty({ title }: { title: string }) {
-  return (
-    <div className="adminAnalyticsEmpty">
-      <span>○</span>
-      <strong>Not enough data yet</strong>
-      <p>{title} will appear when its connected business data is available.</p>
-    </div>
-  );
+function downloadCsv(content: string, filename: string) {
+  const blob = new Blob([content], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function Analytics() {
-  const [preset, setPreset] = useState<DashboardDatePreset>('today');
+  const [preset, setPreset] = useState<DatePreset>('last30days');
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const load = async (p: DatePreset) => {
+    setLoading(true);
+    const res = await getSalesAnalytics(p);
+    setData(res);
+    setError(res.error);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(preset); }, [preset]);
+
+  const handleExport = (type: 'orders') => {
+    startTransition(async () => {
+      if (type === 'orders') {
+        const csv = await getOrdersCsv(preset);
+        downloadCsv(csv, `orders-${preset}.csv`);
+      }
+    });
+  };
+
+  const metrics = data?.metrics || {};
 
   return (
     <section className="adminAnalytics" aria-labelledby="analytics-title">
@@ -33,57 +59,94 @@ export default function Analytics() {
         </div>
       </div>
 
-      <div className="adminNotice">
-        <div>
-          <strong>Business data is not connected</strong>
-          <span>No orders, customers, inventory, WhatsApp, or wholesale data is available to calculate live performance.</span>
-        </div>
-        <span className="adminNoticeTag">No data</span>
-      </div>
-
+      {/* Date range picker */}
       <div className="adminDateBar">
         <div className="adminDatePresets">
           {periods.map(item => (
-            <button type="button" key={item.value} className={preset === item.value ? 'isActive' : ''} onClick={() => setPreset(item.value)}>
+            <button
+              type="button"
+              key={item.value}
+              className={preset === item.value ? 'isActive' : ''}
+              onClick={() => setPreset(item.value)}
+            >
               {item.label}
             </button>
           ))}
-          <button type="button" onClick={() => setPreset('custom')} className={preset === 'custom' ? 'isActive' : ''}>Custom</button>
         </div>
       </div>
 
+      {/* KPI metrics */}
       <section className="adminAnalyticsMetrics">
-        {['Revenue', 'Orders', 'Average order value', 'Conversion', 'New customers', 'Returning customers', 'Customer lifetime value', 'Current inventory', 'Low stock', 'Out of stock'].map(label => (
-          <article key={label}>
-            <p>{label}</p>
-            <strong>—</strong>
-            <span>Unavailable</span>
-          </article>
-        ))}
+        {loading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <article key={i}><p>Loading…</p><strong>—</strong></article>
+          ))
+        ) : (
+          Object.values(metrics).map((m: any) => (
+            <article key={m.label}>
+              <p>{m.label}</p>
+              <strong>
+                {m.value === null ? '—' :
+                  m.label.toLowerCase().includes('revenue') || m.label.toLowerCase().includes('value')
+                    ? `$${Number(m.value).toFixed(2)}`
+                    : m.value
+                }
+              </strong>
+              <span>{m.change !== null ? `${m.change > 0 ? '+' : ''}${m.change}%` : ''}</span>
+            </article>
+          ))
+        )}
       </section>
 
+      {/* Sales by period chart (simple text table) */}
       <div className="adminAnalyticsGrid">
-        {['Sales by period', 'Sales by product', 'Sales by collection', 'Sales by channel', 'Stock velocity', 'Inventory movement'].map(title => (
-          <section key={title} className="adminPanel">
-            <div className="adminPanelHeading"><h2>{title}</h2><span>Unavailable</span></div>
-            <Empty title={title} />
-          </section>
-        ))}
+        <section className="adminPanel">
+          <div className="adminPanelHeading"><h2>Sales by period</h2></div>
+          {loading ? <div className="adminEmpty"><p>Loading…</p></div> :
+            !data?.salesByPeriod?.length ? (
+              <div className="adminAnalyticsEmpty"><span>○</span><strong>Not enough data yet</strong><p>Orders will appear here.</p></div>
+            ) : (
+              <table className="adminTable" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead><tr><th>Date</th><th>Revenue ($)</th></tr></thead>
+                <tbody>
+                  {data.salesByPeriod.map(p => (
+                    <tr key={p.date}><td>{p.date}</td><td>${p.value.toFixed(2)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+        </section>
+
+        <section className="adminPanel">
+          <div className="adminPanelHeading"><h2>Top products by sales</h2></div>
+          {loading ? <div className="adminEmpty"><p>Loading…</p></div> :
+            !data?.salesByProduct?.length ? (
+              <div className="adminAnalyticsEmpty"><span>○</span><strong>Not enough data yet</strong><p>Product sales will appear here.</p></div>
+            ) : (
+              <table className="adminTable" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead><tr><th>Product</th><th>Revenue ($)</th></tr></thead>
+                <tbody>
+                  {data.salesByProduct.map(p => (
+                    <tr key={p.date}><td>{p.date}</td><td>${p.value.toFixed(2)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+        </section>
       </div>
 
+      {/* Exports */}
       <section className="adminPanel">
         <div className="adminPanelHeading">
           <div><p className="adminEyebrow">Exports</p><h2>Reports</h2></div>
-          <span>CSV pending</span>
         </div>
         <div className="adminReportGrid">
-          {reports.map(report => (
-            <button key={report} type="button" disabled>
-              {report}
-              <small>CSV export requires data integration</small>
-            </button>
-          ))}
+          <button type="button" onClick={() => handleExport('orders')} disabled={isPending}>
+            Orders report
+            <small>CSV export — {preset}</small>
+          </button>
         </div>
+        {error && <p style={{ color: 'var(--admin-danger)', fontSize: '13px', padding: '8px' }}>{error}</p>}
       </section>
     </section>
   );

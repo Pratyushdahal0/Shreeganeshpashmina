@@ -68,11 +68,17 @@ export default function Header({
 
           <Link
             className="navLink hideTablet"
-            href="/story"
+            href="/journal"
           >
-            Our Story
+            The Journal
           </Link>
 
+          <Link
+            className="navLink hideTablet"
+            href="/wholesale"
+          >
+            Wholesale
+          </Link>
         </div>
 
         {/* BRAND LOGO */}
@@ -272,6 +278,8 @@ export default function Header({
                   ['Best Sellers', '/shop?filter=best'],
                   ['Our Craft', '/craft'],
                   ['Our Story', '/story'],
+                  ['The Journal', '/journal'],
+                  ['Wholesale', '/wholesale'],
                   ['Contact', '/contact'],
                 ].map(([x, href]) => (
                   <Link

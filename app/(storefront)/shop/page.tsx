@@ -1,4 +1,33 @@
-'use client';import {Suspense,useMemo,useState} from 'react';import {useSearchParams} from 'next/navigation';import {products,categories} from '@/lib/data';import ProductCard from '@/components/ProductCard';import Reveal from '@/components/Reveal';
-const occasionProductIds:Record<string,string[]>={Everyday:['1','2','3','4','5','6'],Formal:['1','4','5','6'],Party:['1','4','5','6'],Wedding:['1','5','6'],Winter:['1','2','3','4','5','6']};
-function ShopContent(){const [cat,setCat]=useState('All Pashmina');const searchParams=useSearchParams();const filter=searchParams.get('filter');const material=searchParams.get('material');const occasion=searchParams.get('occasion');const collection=filter==='new'?{eyebrow:'The latest collection',heading:'NEW ARRIVALS'}:filter==='best'?{eyebrow:'The collection',heading:'BEST SELLERS'}:{eyebrow:'The collection',heading:'Shop'};const shown=useMemo(()=>products.filter(p=>(cat==='All Pashmina'||p.category===cat)&&(!filter||(filter==='new'?p.new:filter==='best'?p.featured:true))&&(!material||p.material.includes(material))&&(!occasion||occasionProductIds[occasion]?.includes(p.id))),[cat,filter,material,occasion]);return <main className="productPage"><div className="container"><div className="sectionHead"><div><div className="eyebrow">{collection.eyebrow}</div><h1 className="serif" style={{fontWeight:400,fontSize:'clamp(48px,6vw,88px)',margin:'15px 0 0'}}>{collection.heading}</h1></div></div><div className="filters" style={{marginBottom:40}}>{categories.map(c=><button key={c} className={`filter ${cat===c?'active':''}`} onClick={()=>setCat(c)}>{c}</button>)}</div><div className="productGrid">{shown.map(p=><Reveal key={p.id}><ProductCard product={p}/></Reveal>)}</div></div></main>}
-export default function Shop(){return <Suspense><ShopContent/></Suspense>}
+import { Suspense } from 'react';
+import { getPublishedProducts } from '@/lib/actions/products';
+import { type CardProduct } from '@/components/ProductCard';
+import ShopClient from './ShopClient';
+
+function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][number]): CardProduct {
+  const firstVariant = p.variants[0];
+  const firstImage = p.images[0];
+  return {
+    id: p.id,
+    slug: p.handle,
+    name: p.title,
+    category: p.category?.name ?? 'Pashmina',
+    material: p.description?.split('\n')[0] ?? 'Pashmina',
+    price: firstVariant ? Number(firstVariant.price) : 0,
+    image: firstImage?.url ?? '/images/product-shawl.jpg',
+    description: p.description ?? '',
+    isNew: false,
+    featured: false,
+  };
+}
+
+export default async function Shop() {
+  const { products } = await getPublishedProducts();
+  const cardProducts = products.map(toCard);
+  const categories = Array.from(new Set(['All Pashmina', ...cardProducts.map(p => p.category)]));
+
+  return (
+    <Suspense fallback={<main className="productPage"><div className="container"><p>Loading shop...</p></div></main>}>
+      <ShopClient initialProducts={cardProducts} categories={categories} />
+    </Suspense>
+  );
+}

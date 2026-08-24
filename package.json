@@ -9,14 +9,22 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.11.3",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
+    "@neondatabase/serverless": "^1.1.0",
+    "@prisma/adapter-neon": "^7.9.1",
+    "@prisma/client": "5.22.0",
+    "@types/ws": "^8.18.1",
     "framer-motion": "^12.23.12",
     "next": "^15.4.6",
+    "next-auth": "^4.24.15",
+    "prisma": "5.22.0",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

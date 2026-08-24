@@ -1,2 +1,32 @@
-'use client';import Image from 'next/image';import {useParams} from 'next/navigation';import {products,currencies,rates} from '@/lib/data';import {useCart} from '@/components/CartContext';import {useEffect,useState} from 'react';import {Icon} from '@/components/Icons';import {whatsappUrl} from '@/lib/whatsapp';
-export default function ProductPage(){const {slug}=useParams<{slug:string}>();const p=products.find(x=>x.slug===slug)||products[0];const {add}=useCart();const [currency,setCurrency]=useState<keyof typeof currencies>('USD');useEffect(()=>{const s=()=>setCurrency((localStorage.getItem('sgp-currency') as keyof typeof currencies)||'USD');s();addEventListener('currencychange',s);return()=>removeEventListener('currencychange',s)},[]);const c=currencies[currency];const price=Math.round(p.price*rates[currency]);const msg=`Hello Shree Ganesh Pashmina, I am interested in ${p.name}. Please share availability, shipping and payment details.`;return <main className="productPage"><div className="container productDetail"><div className="galleryMain"><Image src={p.image} alt={p.name} width={1000} height={1250} style={{width:'100%',height:'100%',objectFit:'cover'}}/></div><div className="detailSticky"><div className="eyebrow">{p.category} · {p.material}</div><h1 className="detailTitle">{p.name}</h1><div className="detailPrice">{c.symbol}{price.toLocaleString()} <span className="muted">{currency}</span></div><p className="detailText">{p.description}</p><div className="detailActions"><button className="btn dark" onClick={()=>add(p)}>Add to bag <Icon name="bag"/></button><a className="btn" href={whatsappUrl(msg)} target="_blank" rel="noreferrer">Ask on WhatsApp <Icon name="whatsapp"/></a></div><div className="detailFacts"><div className="fact"><span>Material</span><strong>{p.material}</strong></div><div className="fact"><span>Origin</span><strong>Kathmandu, Nepal</strong></div><div className="fact"><span>Shipping</span><strong>Worldwide</strong></div><div className="fact"><span>Payment</span><strong>Confirmed via WhatsApp</strong></div></div></div></div></main>}
+import { notFound } from 'next/navigation';
+import { getProductByHandle } from '@/lib/actions/products';
+import { getApprovedReviews } from '@/lib/actions/reviews';
+import ProductDetailClient from './ProductDetailClient';
+
+export default async function ProductPage({ params }: { params: Promise<{ slug: string }> }) {
+  const resolvedParams = await params;
+  const { product } = await getProductByHandle(resolvedParams.slug);
+
+  if (!product || product.status !== 'PUBLISHED') {
+    notFound();
+  }
+
+  const { reviews } = await getApprovedReviews(product.id);
+
+  const firstVariant = product.variants[0];
+  const firstImage = product.images[0];
+
+  const formattedProduct = {
+    id: product.id,
+    slug: product.handle,
+    name: product.title,
+    category: product.category?.name ?? 'Pashmina',
+    material: product.description?.split('\n')[0] ?? 'Pashmina',
+    price: firstVariant ? Number(firstVariant.price) : 0,
+    image: firstImage?.url ?? '/images/product-shawl.jpg',
+    description: product.description ?? '',
+    images: product.images.length > 0 ? product.images.map(img => img.url) : ['/images/product-shawl.jpg'],
+  };
+
+  return <ProductDetailClient product={formattedProduct} initialReviews={reviews} />;
+}

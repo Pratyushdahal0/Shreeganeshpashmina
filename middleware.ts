@@ -1,8 +1,27 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
 
-export function middleware(request: NextRequest) {
-  // Allow all requests through for development purposes. 
-  // In a production app, you would implement authentication logic here.
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Allow health check endpoint without auth
+  if (pathname === '/api/admin/health') {
+    return NextResponse.next();
+  }
+
+  const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "admin-secret-key-12345";
+  const token = await getToken({ req: request, secret });
+
+  if (!token) {
+    if (pathname.startsWith('/api/admin')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   return NextResponse.next();
 }
 

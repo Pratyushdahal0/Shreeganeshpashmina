@@ -2,17 +2,23 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import type { AdminProduct, ProductSort } from '@/lib/admin/products';
 
-type Props = { products: AdminProduct[]; categories: string[] };
-const unavailable = 'Unavailable';
+type ProductSort = 'name-asc' | 'price-asc' | 'price-desc';
+type Props = { products: any[]; categories: string[] };
 
 export default function ProductList({ products, categories }: Props) {
   const [query, setQuery] = useState(''); 
   const [category, setCategory] = useState('all'); 
   const [sort, setSort] = useState<ProductSort>('name-asc');
   
-  const shown = useMemo(() => products.filter((product) => (!query || [product.name, product.slug, product.category].some((value) => value.toLowerCase().includes(query.toLowerCase()))) && (category === 'all' || product.category === category)).sort((a, b) => sort === 'price-asc' ? a.price - b.price : sort === 'price-desc' ? b.price - a.price : a.name.localeCompare(b.name)), [products, query, category, sort]);
+  const shown = useMemo(() => products.filter((product) => (!query || [product.title, product.handle, product.category?.name].some((value) => value?.toLowerCase().includes(query.toLowerCase()))) && (category === 'all' || product.category?.name === category)).sort((a, b) => {
+    // Basic sort. We assume a variant exists or default to 0.
+    const priceA = a.variants?.[0]?.price ? Number(a.variants[0].price) : 0;
+    const priceB = b.variants?.[0]?.price ? Number(b.variants[0].price) : 0;
+    if (sort === 'price-asc') return priceA - priceB;
+    if (sort === 'price-desc') return priceB - priceA;
+    return a.title.localeCompare(b.title);
+  }), [products, query, category, sort]);
   
   return (
     <section className="adminProducts" aria-labelledby="products-title">
@@ -31,15 +37,7 @@ export default function ProductList({ products, categories }: Props) {
         </div>
       </div>
       
-      <div className="adminNotice" style={{ margin: '8px 0', borderRadius: 'var(--radius-md)' }}>
-        <div>
-          <strong>Static storefront catalogue</strong>
-          <span>Showing {products.length} existing local products. Product persistence and operational status data are not connected.</span>
-        </div>
-        <span className="adminNoticeTag">Development source</span>
-      </div>
-      
-      <div className="adminProductTools" style={{ display: 'flex', gap: '16px', padding: '16px', background: 'var(--admin-panel)', borderRadius: 'var(--radius-md)', border: '1px solid var(--admin-line)' }}>
+      <div className="adminProductTools" style={{ display: 'flex', gap: '16px', padding: '16px', marginTop: '16px', background: 'var(--admin-panel)', borderRadius: 'var(--radius-md)', border: '1px solid var(--admin-line)' }}>
         <label className="adminSearch" style={{ flex: 1, margin: 0 }}>
           <span style={{ display: 'none' }}>Search</span>
           <input 
@@ -81,33 +79,40 @@ export default function ProductList({ products, categories }: Props) {
             </tr>
           </thead>
           <tbody>
-            {shown.map((product) => (
-              <tr key={product.id}>
-                <td style={{ padding: '12px' }}><input type="checkbox" disabled /></td>
-                <td>
-                  <Link href={`/admin/products/${product.id}`} className="adminProductName" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ width: '40px', height: '40px', background: 'var(--admin-bg)', borderRadius: '6px', border: '1px solid var(--admin-line)', display: 'grid', placeItems: 'center', fontWeight: 600, color: 'var(--admin-muted)' }}>
-                      {product.name.slice(0, 1)}
-                    </div>
-                    <div>
-                      <strong style={{ color: 'var(--admin-ink)' }}>{product.name}</strong>
-                    </div>
-                  </Link>
-                </td>
-                <td><span style={{ color: 'var(--admin-muted)', fontFamily: 'monospace' }}>{product.sku ?? '—'}</span></td>
-                <td>{product.category}</td>
-                <td>${product.price.toLocaleString()}</td>
-                <td><span style={{ color: 'var(--admin-muted)', background: 'var(--admin-bg)', padding: '4px 8px', borderRadius: '4px', fontSize: '11px' }}>0 in stock</span></td>
-                <td>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', background: '#EFF6FF', color: '#1D4ED8', fontSize: '11px', fontWeight: 500 }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3B82F6' }}></span> Active
-                  </span>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <Link href={`/admin/products/${product.id}`} style={{ color: 'var(--admin-muted)', textDecoration: 'none', fontWeight: 500, fontSize: '13px' }}>Edit</Link>
-                </td>
-              </tr>
-            ))}
+            {shown.map((product) => {
+              const variant = product.variants?.[0];
+              const price = variant?.price ? Number(variant.price) : 0;
+              const inventory = product.variants?.reduce((sum: number, v: any) => sum + v.inventory, 0) || 0;
+              const sku = variant?.sku || '—';
+              
+              return (
+                <tr key={product.id}>
+                  <td style={{ padding: '12px' }}><input type="checkbox" disabled /></td>
+                  <td>
+                    <Link href={`/admin/products/${product.id}`} className="adminProductName" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', background: 'var(--admin-bg)', borderRadius: '6px', border: '1px solid var(--admin-line)', display: 'grid', placeItems: 'center', fontWeight: 600, color: 'var(--admin-muted)' }}>
+                        {product.title.slice(0, 1)}
+                      </div>
+                      <div>
+                        <strong style={{ color: 'var(--admin-ink)' }}>{product.title}</strong>
+                      </div>
+                    </Link>
+                  </td>
+                  <td><span style={{ color: 'var(--admin-muted)', fontFamily: 'monospace' }}>{sku}</span></td>
+                  <td>{product.category?.name || '—'}</td>
+                  <td>${price.toLocaleString()}</td>
+                  <td><span style={{ color: 'var(--admin-muted)', background: 'var(--admin-bg)', padding: '4px 8px', borderRadius: '4px', fontSize: '11px' }}>{inventory} in stock</span></td>
+                  <td>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 8px', borderRadius: '4px', background: product.status === 'PUBLISHED' ? '#EFF6FF' : '#F3F4F6', color: product.status === 'PUBLISHED' ? '#1D4ED8' : '#4B5563', fontSize: '11px', fontWeight: 500 }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: product.status === 'PUBLISHED' ? '#3B82F6' : '#9CA3AF' }}></span> {product.status === 'PUBLISHED' ? 'Active' : 'Draft'}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <Link href={`/admin/products/${product.id}`} style={{ color: 'var(--admin-muted)', textDecoration: 'none', fontWeight: 500, fontSize: '13px' }}>Edit</Link>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
         {shown.length === 0 && (

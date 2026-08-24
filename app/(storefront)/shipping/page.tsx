@@ -1,1 +1,22 @@
-export default function Page(){return <main className="section" style={{paddingTop:145}}><div className="container" style={{maxWidth:900}}><div className="eyebrow">Shree Ganesh Pashmina</div><h1 className="serif" style={{fontWeight:400,fontSize:'clamp(50px,7vw,90px)',lineHeight:1,margin:'20px 0 45px'}}>Shipping</h1><p className="detailText">This policy page is a launch placeholder. Final legal wording, delivery timeframes, exclusions and regional requirements will be approved by the client before production launch.</p></div></main>}
+import { getSiteContent } from '@/lib/actions/content';
+import Reveal from '@/components/Reveal';
+
+export default async function ShippingPage() {
+  const { data: policies } = await getSiteContent('policies');
+
+  return (
+    <main className="section" style={{ paddingTop: 145 }}>
+      <div className="container" style={{ maxWidth: 800 }}>
+        <Reveal>
+          <div className="eyebrow">Fulfilment</div>
+          <h1 className="serif" style={{ fontSize: 'clamp(40px,6vw,72px)', fontWeight: 400, marginBottom: '30px' }}>
+            Worldwide Shipping
+          </h1>
+          <div style={{ fontSize: '16px', lineHeight: 1.8, color: '#333', whiteSpace: 'pre-line' }}>
+            {policies.shippingPolicy}
+          </div>
+        </Reveal>
+      </div>
+    </main>
+  );
+}

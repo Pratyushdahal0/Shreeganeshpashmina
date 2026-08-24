@@ -1,17 +1,77 @@
 'use client';
-import { useState } from 'react';
-import { validateDiscount } from '@/lib/admin/discounts';
+import { useEffect, useState, useTransition } from 'react';
+import {
+  getDiscounts,
+  createDiscount,
+  toggleDiscount,
+  deleteDiscount,
+} from '@/lib/actions/discounts';
+
+type Discount = Awaited<ReturnType<typeof getDiscounts>>['discounts'][number];
+
+const TYPES = [
+  { value: 'PERCENTAGE', label: 'Percentage (%)' },
+  { value: 'FIXED', label: 'Fixed ($)' },
+];
 
 export default function Discounts() {
-  const [value, setValue] = useState('');
-  const [result, setResult] = useState<string | null>(null);
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  const check = () => {
-    const validated = validateDiscount({ type: 'fixed', value: Number(value || 0), minimumOrderAmount: undefined });
-    setResult(validated.valid
-      ? 'Rule is valid, but cannot be saved without a promotion service.'
-      : validated.errors.join(' ')
-    );
+  // Form state
+  const [code, setCode] = useState('');
+  const [type, setType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
+  const [value, setValue] = useState('');
+  const [minSpend, setMinSpend] = useState('');
+  const [startsAt, setStartsAt] = useState('');
+  const [endsAt, setEndsAt] = useState('');
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
+    const res = await getDiscounts();
+    setDiscounts(res.discounts);
+    setError(res.error);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleCreate = () => {
+    setFormError(null);
+    setFormSuccess(null);
+    startTransition(async () => {
+      const res = await createDiscount({
+        code,
+        discountType: type,
+        discountValue: Number(value),
+        minimumSubtotal: minSpend ? Number(minSpend) : undefined,
+        startsAt: startsAt || undefined,
+        endsAt: endsAt || undefined,
+      });
+      if (res.error) { setFormError(res.error); return; }
+      setFormSuccess('Discount created successfully');
+      setCode(''); setValue(''); setMinSpend(''); setStartsAt(''); setEndsAt('');
+      await load();
+    });
+  };
+
+  const handleToggle = (id: string) => {
+    startTransition(async () => {
+      await toggleDiscount(id);
+      await load();
+    });
+  };
+
+  const handleDelete = (id: string) => {
+    if (!confirm('Delete this discount?')) return;
+    startTransition(async () => {
+      await deleteDiscount(id);
+      await load();
+    });
   };
 
   return (
@@ -24,44 +84,90 @@ export default function Discounts() {
         </div>
       </div>
 
-      <div className="adminNotice">
-        <div>
-          <strong>Discounts are not connected</strong>
-          <span>No active discounts or promotion records are available. Rules cannot be saved or redeemed.</span>
-        </div>
-        <span className="adminNoticeTag">No persistence</span>
-      </div>
-
-      <section className="adminDiscountRules">
-        <span>Percentage or fixed value</span>
-        <span>Product or collection scope</span>
-        <span>Minimum order and customer restrictions</span>
-        <span>Dates and usage limits</span>
-      </section>
-
+      {/* Create form */}
       <div className="adminPanel">
         <div className="adminPanelHeading">
-          <div><p className="adminEyebrow">Rule validation</p><h2>Negative-price protection</h2></div>
+          <div><p className="adminEyebrow">New promotion</p><h2>Create discount</h2></div>
         </div>
         <div className="adminDiscountCheck">
           <label>
-            Fixed discount value
-            <input type="number" min="0" value={value} onChange={e => setValue(e.target.value)} placeholder="Enter amount to validate..." />
+            Code
+            <input value={code} onChange={e => setCode(e.target.value.toUpperCase())} placeholder="e.g. SAVE20" />
           </label>
-          <button type="button" className="adminPrimaryButton" onClick={check}>Validate rule</button>
-          {result && <p className="adminFormMessage">{result}</p>}
+          <label>
+            Type
+            <select value={type} onChange={e => setType(e.target.value as any)}>
+              {TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </label>
+          <label>
+            Value
+            <input type="number" min="0" value={value} onChange={e => setValue(e.target.value)} placeholder={type === 'PERCENTAGE' ? '% off' : 'Amount off'} />
+          </label>
+          <label>
+            Min spend ($)
+            <input type="number" min="0" value={minSpend} onChange={e => setMinSpend(e.target.value)} placeholder="Optional" />
+          </label>
+          <label>
+            Starts at
+            <input type="date" value={startsAt} onChange={e => setStartsAt(e.target.value)} />
+          </label>
+          <label>
+            Ends at
+            <input type="date" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
+          </label>
+          <button type="button" className="adminPrimaryButton" onClick={handleCreate} disabled={isPending}>
+            {isPending ? 'Saving…' : 'Create discount'}
+          </button>
+          {formError && <p className="adminFormMessage" style={{ color: 'var(--admin-danger)' }}>{formError}</p>}
+          {formSuccess && <p className="adminFormMessage">{formSuccess}</p>}
         </div>
       </div>
 
+      {/* List */}
       <div className="adminPanel">
         <div className="adminPanelHeading">
           <div><p className="adminEyebrow">Promotions</p><h2>All discounts</h2></div>
-          <span>Unavailable</span>
+          <span>{discounts.length} discount{discounts.length !== 1 ? 's' : ''}</span>
         </div>
-        <div className="adminEmpty">
-          <span aria-hidden="true">○</span>
-          <p><strong>No discounts available</strong>Connect a promotion backend to create server-validated discounts and enforce eligibility at checkout.</p>
-        </div>
+        {loading ? (
+          <div className="adminEmpty"><p>Loading…</p></div>
+        ) : error ? (
+          <div className="adminEmpty"><p style={{ color: 'var(--admin-danger)' }}>{error}</p></div>
+        ) : discounts.length === 0 ? (
+          <div className="adminEmpty">
+            <span aria-hidden="true">○</span>
+            <p><strong>No discounts yet</strong>Create your first discount code above.</p>
+          </div>
+        ) : (
+          <table className="adminTable" style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr>
+                <th>Code</th><th>Type</th><th>Value</th><th>Min spend</th><th>Expires</th><th>Uses</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {discounts.map(d => (
+                <tr key={d.id}>
+                  <td><strong>{d.code}</strong></td>
+                  <td>{d.discountType}</td>
+                  <td>{d.discountType === 'PERCENTAGE' ? `${d.discountValue}%` : `$${d.discountValue}`}</td>
+                  <td>{d.minimumSubtotal ? `$${d.minimumSubtotal}` : '—'}</td>
+                  <td>{d.endsAt ? new Date(d.endsAt).toLocaleDateString() : '—'}</td>
+                  <td>{d.usageCount}</td>
+                  <td>
+                    <button type="button" onClick={() => handleToggle(d.id)} style={{ fontSize: '12px' }}>
+                      {d.isActive ? '✔ Active' : '✗ Disabled'}
+                    </button>
+                  </td>
+                  <td>
+                    <button type="button" onClick={() => handleDelete(d.id)} className="adminDangerButton" style={{ fontSize: '12px' }}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </section>
   );

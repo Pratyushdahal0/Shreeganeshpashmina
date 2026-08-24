@@ -1,8 +1,49 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState, useTransition } from 'react';
+import { getInquiries, updateInquiry, deleteInquiry } from '@/lib/actions/inquiries';
+
+type Inquiry = Awaited<ReturnType<typeof getInquiries>>['inquiries'][number];
+
+const STATUSES = ['OPEN', 'REPLIED', 'CLOSED'];
 
 export default function WhatsAppInquiries() {
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [notesMap, setNotesMap] = useState<Record<string, string>>({});
+
+  const load = async () => {
+    setLoading(true);
+    const res = await getInquiries('WHATSAPP', statusFilter === 'ALL' ? undefined : statusFilter);
+    setInquiries(res.inquiries);
+    setError(res.error);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [statusFilter]);
+
+  const filtered = inquiries.filter(i =>
+    !query ||
+    i.customerName.toLowerCase().includes(query.toLowerCase()) ||
+    i.customerPhone?.toLowerCase().includes(query.toLowerCase()) ||
+    i.message.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const doStatus = (id: string, status: string) => {
+    startTransition(async () => { await updateInquiry(id, { status }); await load(); });
+  };
+
+  const doNotes = (id: string) => {
+    startTransition(async () => { await updateInquiry(id, { notes: notesMap[id] || '' }); await load(); });
+  };
+
+  const doDelete = (id: string) => {
+    if (!confirm('Delete this inquiry?')) return;
+    startTransition(async () => { await deleteInquiry(id); await load(); });
+  };
 
   return (
     <section className="adminWhatsApp" aria-labelledby="whatsapp-title">
@@ -14,44 +55,69 @@ export default function WhatsAppInquiries() {
         </div>
       </div>
 
-      <div className="adminNotice">
-        <div>
-          <strong>WhatsApp CRM is not connected</strong>
-          <span>This repository only generates WhatsApp conversation links. It has no configured WhatsApp Business API or inquiry backend.</span>
-        </div>
-        <span className="adminNoticeTag">Integration pending</span>
-      </div>
-
       <div className="adminProductTools">
         <label className="adminSearch" style={{ flex: 1 }}>
           <span style={{ display: 'none' }}>Search inquiries</span>
-          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Customer, product, reference, or assigned staff" />
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Customer, phone, or message" />
         </label>
         <label style={{ width: '180px' }}>
           <span style={{ display: 'none' }}>Status</span>
-          <select disabled><option>All statuses</option></select>
-        </label>
-        <label style={{ width: '180px' }}>
-          <span style={{ display: 'none' }}>Assignee</span>
-          <select disabled><option>All staff</option></select>
+          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+            <option value="ALL">All statuses</option>
+            {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
         </label>
       </div>
-
-      <section className="adminWhatsAppWorkflow" aria-label="WhatsApp conversion workflow">
-        {['New inquiry', 'Contacted', 'Negotiating', 'Order confirmed', 'Convert to order'].map((step, index) => (
-          <div key={step}><strong>{index + 1}</strong><span>{step}</span></div>
-        ))}
-      </section>
 
       <div className="adminPanel">
         <div className="adminPanelHeading">
           <div><p className="adminEyebrow">Inquiry list</p><h2>All conversations</h2></div>
-          <span>Unavailable</span>
+          <span>{filtered.length} inquiry{filtered.length !== 1 ? 'inquiries' : ''}</span>
         </div>
-        <div className="adminEmpty">
-          <span aria-hidden="true">○</span>
-          <p><strong>No WhatsApp inquiries available</strong>Connect message ingestion and an internal CRM datastore to track customers, product/variant interest, quantity, notes, follow-ups, staff assignment, and conversion.</p>
-        </div>
+        {loading ? (
+          <div className="adminEmpty"><p>Loading…</p></div>
+        ) : error ? (
+          <div className="adminEmpty"><p style={{ color: 'var(--admin-danger)' }}>{error}</p></div>
+        ) : filtered.length === 0 ? (
+          <div className="adminEmpty">
+            <span aria-hidden="true">○</span>
+            <p><strong>No WhatsApp inquiries</strong>Inquiries submitted via the contact form will appear here.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {filtered.map(i => (
+              <div key={i.id} className="adminPanel" style={{ padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+                      <strong>{i.customerName}</strong>
+                      {i.customerPhone && <span style={{ color: 'var(--admin-muted)', fontSize: '13px' }}>{i.customerPhone}</span>}
+                    </div>
+                    <p style={{ margin: '0 0 8px', fontSize: '14px' }}>{i.message}</p>
+                    {i.notes && <p style={{ margin: 0, fontSize: '12px', color: 'var(--admin-muted)', fontStyle: 'italic' }}>Notes: {i.notes}</p>}
+                    <div style={{ marginTop: '8px', display: 'flex', gap: '6px' }}>
+                      <input
+                        style={{ flex: 1, fontSize: '13px' }}
+                        placeholder="Add or update notes…"
+                        value={notesMap[i.id] ?? (i.notes || '')}
+                        onChange={e => setNotesMap(m => ({ ...m, [i.id]: e.target.value }))}
+                      />
+                      <button type="button" onClick={() => doNotes(i.id)} disabled={isPending} style={{ fontSize: '12px' }}>Save notes</button>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '110px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 600 }}>{i.status}</span>
+                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--admin-muted)' }}>{new Date(i.createdAt).toLocaleDateString()}</p>
+                    <select value={i.status} onChange={e => doStatus(i.id, e.target.value)} style={{ fontSize: '12px' }}>
+                      {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <button type="button" onClick={() => doDelete(i.id)} className="adminDangerButton" style={{ fontSize: '12px' }}>Delete</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

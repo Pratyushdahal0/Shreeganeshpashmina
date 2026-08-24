@@ -1,4 +1,53 @@
-import type{AdminRole}from'./auth';
-export type AdminUser={id:string;name:string;email:string;role:AdminRole;active:boolean;lastActiveAt:string|null;createdAt:string};export type AuditEvent={id:string;actorId:string;action:'user.role_changed'|'user.permissions_changed'|'user.invited'|'user.deactivated';targetId:string;metadata:Record<string,string>;createdAt:string};export type UserMutationResult={ok:false;reason:'persistence_unavailable';message:string};
-export interface UserService{list():Promise<{state:'unavailable'|'live';users:AdminUser[]}>;audit():Promise<AuditEvent[]>;setRole(userId:string,role:AdminRole):Promise<UserMutationResult>;setActive(userId:string,active:boolean):Promise<UserMutationResult>;}
-const unavailable=():UserMutationResult=>({ok:false,reason:'persistence_unavailable',message:'User identity storage is not connected; no user or permission change was saved or audited.'});export const userService:UserService={async list(){return{state:'unavailable',users:[]}},async audit(){return[]},async setRole(){return unavailable()},async setActive(){return unavailable()}};
+import { getUsers, updateUserRole, deleteUser } from '@/lib/actions/users';
+
+export type AdminRole = 'USER' | 'MANAGER' | 'ADMIN';
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  active: boolean;
+  createdAt: string;
+};
+
+export type UserMutationResult =
+  | { ok: true; message: string; user?: any }
+  | { ok: false; reason: string; message: string };
+
+function transformUser(u: any): AdminUser {
+  return {
+    id: u.id,
+    name: u.name || 'Admin User',
+    email: u.email || 'N/A',
+    role: u.role || 'USER',
+    active: true,
+    createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+export const userService = {
+  async list(): Promise<{ state: 'live' | 'unavailable'; users: AdminUser[] }> {
+    const { users, error } = await getUsers();
+    if (error || !users) {
+      return { state: 'unavailable', users: [] };
+    }
+    return { state: 'live', users: users.map(transformUser) };
+  },
+
+  async setRole(userId: string, role: AdminRole): Promise<UserMutationResult> {
+    const { user, error } = await updateUserRole(userId, role as any);
+    if (error || !user) {
+      return { ok: false, reason: 'error', message: error || 'Failed to set user role' };
+    }
+    return { ok: true, message: `User role updated to ${role}` };
+  },
+
+  async delete(userId: string): Promise<UserMutationResult> {
+    const { error } = await deleteUser(userId);
+    if (error) {
+      return { ok: false, reason: 'error', message: error };
+    }
+    return { ok: true, message: 'User removed successfully' };
+  },
+};

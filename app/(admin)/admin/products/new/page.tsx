@@ -1,2 +1,9 @@
 import ProductEditor from '@/components/admin/products/ProductEditor';
-export default function NewProductPage() { return <ProductEditor />; }
+import { getCollections } from '@/lib/actions/collections';
+
+export default async function NewProductPage() {
+  const { collections } = await getCollections();
+  const formattedCategories = (collections || []).map((c) => ({ id: c.id, name: c.name }));
+
+  return <ProductEditor categories={formattedCategories} />;
+}

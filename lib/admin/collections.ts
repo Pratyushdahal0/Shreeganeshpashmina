@@ -1,15 +1,65 @@
-import { productCategories, type AdminProduct } from '@/lib/admin/products';
+import { getCollections, getCollection, createCollection, updateCollection, deleteCollection } from '@/lib/actions/collections';
 
-export type Collection = { id: string; slug: string; name: string; description: string | null; image: string | null; productIds: string[]; featured: boolean | null; position: number | null; status: 'unavailable' | 'active' | 'archived'; seoTitle: string | null; seoDescription: string | null };
-export type CollectionInput = Pick<Collection, 'name' | 'slug' | 'description' | 'image' | 'productIds' | 'featured' | 'position' | 'seoTitle' | 'seoDescription'>;
-export type CollectionMutationResult = { ok: false; reason: 'persistence_unavailable'; message: string };
-
-export interface CollectionService { list(): Promise<{ state: 'static' | 'live' | 'unavailable'; collections: Collection[] }>; get(slug: string): Promise<Collection | null>; create(input: CollectionInput): Promise<CollectionMutationResult>; update(slug: string, input: CollectionInput): Promise<CollectionMutationResult>; archive(slug: string): Promise<CollectionMutationResult>; restore(slug: string): Promise<CollectionMutationResult>; setProducts(slug: string, productIds: string[]): Promise<CollectionMutationResult>; }
-
-/** Existing storefront categories are the only collection-like source. No collection records are fabricated. */
-export const collectionService: CollectionService = {
-  async list() { return { state: 'static' as const, collections: productCategories.map((name) => ({ id: name.toLowerCase(), slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), name, description: null, image: null, productIds: [], featured: null, position: null, status: 'unavailable' as const, seoTitle: null, seoDescription: null })) }; },
-  async get(slug) { return (await this.list()).collections.find((collection) => collection.slug === slug) ?? null; },
-  async create() { return unavailable(); }, async update() { return unavailable(); }, async archive() { return unavailable(); }, async restore() { return unavailable(); }, async setProducts() { return unavailable(); },
+export type Collection = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  productCount: number;
+  createdAt: string;
 };
-const unavailable = (): CollectionMutationResult => ({ ok: false, reason: 'persistence_unavailable', message: 'Collection changes cannot be saved until a catalogue API or database is connected.' });
+
+export type CollectionMutationResult =
+  | { ok: true; message: string; collection?: any }
+  | { ok: false; reason: string; message: string };
+
+function transformCategory(c: any): Collection {
+  return {
+    id: c.id,
+    slug: c.slug,
+    name: c.name,
+    description: c.description || null,
+    productCount: c.products?.length || 0,
+    createdAt: c.createdAt ? new Date(c.createdAt).toISOString() : new Date().toISOString(),
+  };
+}
+
+export const collectionService = {
+  async list(): Promise<{ state: 'live' | 'unavailable'; collections: Collection[] }> {
+    const { collections, error } = await getCollections();
+    if (error || !collections) {
+      return { state: 'unavailable', collections: [] };
+    }
+    return { state: 'live', collections: collections.map(transformCategory) };
+  },
+
+  async get(id: string): Promise<Collection | null> {
+    const { collection } = await getCollection(id);
+    if (!collection) return null;
+    return transformCategory(collection);
+  },
+
+  async create(input: { name: string; slug?: string; description?: string }): Promise<CollectionMutationResult> {
+    const res = await createCollection(input);
+    if (res.error || !res.collection) {
+      return { ok: false, reason: 'error', message: res.error || 'Failed to create collection' };
+    }
+    return { ok: true, message: 'Collection created successfully', collection: res.collection };
+  },
+
+  async update(id: string, input: { name?: string; slug?: string; description?: string }): Promise<CollectionMutationResult> {
+    const res = await updateCollection(id, input);
+    if (res.error || !res.collection) {
+      return { ok: false, reason: 'error', message: res.error || 'Failed to update collection' };
+    }
+    return { ok: true, message: 'Collection updated successfully', collection: res.collection };
+  },
+
+  async delete(id: string): Promise<CollectionMutationResult> {
+    const res = await deleteCollection(id);
+    if (res.error) {
+      return { ok: false, reason: 'error', message: res.error };
+    }
+    return { ok: true, message: 'Collection deleted successfully' };
+  },
+};

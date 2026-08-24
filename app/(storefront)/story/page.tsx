@@ -1,2 +1,35 @@
+import { getSiteContent } from '@/lib/actions/content';
 import Reveal from '@/components/Reveal';
-export default function Story(){return <main className="section" style={{paddingTop:145}}><div className="container" style={{maxWidth:1100}}><Reveal><div className="eyebrow">Our story</div><h1 className="serif" style={{fontSize:'clamp(55px,8vw,110px)',fontWeight:400,lineHeight:.95}}>A modern house<br/>rooted in craft.</h1></Reveal><div style={{marginTop:80,maxWidth:700,marginLeft:'auto'}}><Reveal><p className="introCopy">Shree Ganesh Pashmina is being shaped in Kathmandu with one ambition: to bring the feeling of exceptional Himalayan textiles to a global wardrobe.</p><p className="detailText" style={{marginTop:30}}>The brand combines pashmina, cashmere, silk and wool with an editorial approach to design. The final brand story will be refined with the founders before launch.</p></Reveal></div></div></main>}
+import Image from 'next/image';
+
+export default async function Story() {
+  const { data: story } = await getSiteContent('brand_story');
+
+  return (
+    <main className="section" style={{ paddingTop: 145 }}>
+      <div className="container" style={{ maxWidth: 1100 }}>
+        <Reveal>
+          <div className="eyebrow">{story.eyebrow}</div>
+          <h1 className="serif" style={{ fontSize: 'clamp(55px,8vw,110px)', fontWeight: 400, lineHeight: .95, whiteSpace: 'pre-line' }}>
+            {story.title}
+          </h1>
+        </Reveal>
+
+        {story.image && (
+          <div style={{ marginTop: 40, position: 'relative', width: '100%', height: '400px', borderRadius: '4px', overflow: 'hidden' }}>
+            <Image src={story.image} alt={story.title || 'Brand Story'} fill style={{ objectFit: 'cover' }} />
+          </div>
+        )}
+
+        <div style={{ marginTop: 60, maxWidth: 750, marginLeft: 'auto' }}>
+          <Reveal>
+            <p className="introCopy">{story.introCopy}</p>
+            <p className="detailText" style={{ marginTop: 30, whiteSpace: 'pre-line' }}>
+              {story.detailText}
+            </p>
+          </Reveal>
+        </div>
+      </div>
+    </main>
+  );
+}
