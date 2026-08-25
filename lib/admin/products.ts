@@ -13,6 +13,7 @@ export type AdminProduct = {
   price: number;
   currency: string;
   images: string[];
+  imageAssets: { url: string; thumbUrl: string | null }[];
   colors: string[];
   sizes: string[];
   stock: number;
@@ -50,6 +51,7 @@ export type ProductInput = {
   stock?: number;
   status?: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   imageUrl?: string;
+  images?: { url: string; thumbUrl?: string | null }[];
 };
 
 function transformPrismaProduct(p: any): AdminProduct {
@@ -71,6 +73,7 @@ function transformPrismaProduct(p: any): AdminProduct {
     price,
     currency: 'USD',
     images: p.images?.map((img: any) => img.url) || [],
+    imageAssets: (p.images || []).map((img: any) => ({ url: img.url, thumbUrl: img.thumbUrl || null })),
     colors: [],
     sizes: [],
     stock,
@@ -137,6 +140,7 @@ export const productService = {
       status: input.status || 'DRAFT',
       categoryId: input.categoryId,
       imageUrl: input.imageUrl,
+      images: input.images,
     });
     if (res.error) {
       return { ok: false, reason: 'error', message: res.error };
@@ -155,6 +159,7 @@ export const productService = {
       status: input.status,
       categoryId: input.categoryId,
       imageUrl: input.imageUrl,
+      images: input.images,
     });
     if (res.error) {
       return { ok: false, reason: 'error', message: res.error };

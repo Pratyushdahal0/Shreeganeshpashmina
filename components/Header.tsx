@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Icon } from './Icons';
@@ -18,6 +19,16 @@ export default function Header({
   const [shop, setShop] = useState(false);
   const [search, setSearch] = useState(false);
   const [mobile, setMobile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+
+  const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+    setSearch(false);
+    router.push(`/shop?q=${encodeURIComponent(query)}`);
+  };
 
   return (
     <header className="siteHeader">
@@ -215,27 +226,6 @@ export default function Header({
                 ))}
               </div>
 
-              <div>
-                <div className="megaTitle">
-                  By Occasion
-                </div>
-
-                {[
-                  'Everyday',
-                  'Formal',
-                  'Party',
-                  'Wedding',
-                  'Winter',
-                ].map((x) => (
-                  <Link
-                    key={x}
-                    href={`/shop?occasion=${x}`}
-                  >
-                    {x}
-                  </Link>
-                ))}
-              </div>
-
               <div className="megaFeature">
                 <img
                   src="/images/collection-shawls.jpg"
@@ -356,11 +346,16 @@ export default function Header({
 
               </div>
 
-              <input
-                autoFocus
-                className="searchInput"
-                placeholder="Search shawls, cashmere..."
-              />
+              <form onSubmit={submitSearch}>
+                <input
+                  autoFocus
+                  className="searchInput"
+                  placeholder="Search shawls, cashmere..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  aria-label="Search the collection"
+                />
+              </form>
 
               <div
                 style={{ marginTop: 25 }}

@@ -1,39 +1,43 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { currencies, rates } from '@/lib/data';
-import { useEffect, useState } from 'react';
+import { useCurrency } from '@/components/CurrencyContext';
 
-// Shape that both legacy and DB products conform to
 export type CardProduct = {
   id: string;
-  slug: string; // handle from DB, slug from legacy
-  name: string; // title from DB, name from legacy
+  slug: string;
+  name: string;
   category: string;
   material: string;
-  price: number; // USD base price
+  price: number;
   image: string;
   description: string;
   isNew?: boolean;
   featured?: boolean;
 };
 
-export default function ProductCard({ product }: { product: CardProduct }) {
-  const [currency, setCurrency] = useState<keyof typeof currencies>('USD');
-  useEffect(() => {
-    const sync = () => setCurrency((localStorage.getItem('sgp-currency') as keyof typeof currencies) || 'USD');
-    sync();
-    addEventListener('currencychange', sync);
-    return () => removeEventListener('currencychange', sync);
-  }, []);
+export default function ProductCard({ product, priority = false }: { product: CardProduct; priority?: boolean }) {
+  const { currency } = useCurrency();
   const c = currencies[currency];
   const price = Math.round(product.price * rates[currency]);
+  const [imgSrc, setImgSrc] = useState(product.image || '/images/product-shawl.jpg');
+
   return (
     <Link className="productCard" href={`/product/${product.slug}`}>
       <motion.div className="productMedia" whileHover={{ y: -3 }} transition={{ duration: 0.4 }}>
-        <Image src={product.image} alt={product.name} fill sizes="(max-width:720px) 50vw, 33vw" />
-        <>{product.isNew && <span className="badge">New</span>}</>
+        <Image
+          src={imgSrc}
+          alt={product.name}
+          fill
+          sizes="(max-width:720px) 50vw, (max-width:1100px) 33vw, 320px"
+          loading={priority ? 'eager' : 'lazy'}
+          priority={priority}
+          onError={() => setImgSrc('/images/product-shawl.jpg')}
+        />
+        {product.isNew && <span className="badge">New</span>}
       </motion.div>
       <div className="productMeta">
         <div>

@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { ChangeEvent, useMemo, useRef, useState, useTransition } from 'react';
+import { importProducts, type ProductImportRow } from '@/lib/actions/products';
 
 type ProductSort = 'name-asc' | 'price-asc' | 'price-desc';
 type Props = { products: any[]; categories: string[] };
@@ -10,6 +11,9 @@ export default function ProductList({ products, categories }: Props) {
   const [query, setQuery] = useState(''); 
   const [category, setCategory] = useState('all'); 
   const [sort, setSort] = useState<ProductSort>('name-asc');
+  const [isImporting, startImport] = useTransition();
+  const [notice, setNotice] = useState<string | null>(null);
+  const importInput = useRef<HTMLInputElement>(null);
   
   const shown = useMemo(() => products.filter((product) => (!query || [product.title, product.handle, product.category?.name].some((value) => value?.toLowerCase().includes(query.toLowerCase()))) && (category === 'all' || product.category?.name === category)).sort((a, b) => {
     // Basic sort. We assume a variant exists or default to 0.
@@ -20,6 +24,45 @@ export default function ProductList({ products, categories }: Props) {
     return a.title.localeCompare(b.title);
   }), [products, query, category, sort]);
   
+  const csvEscape = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const exportProducts = () => {
+    const header = ['title', 'handle', 'description', 'category', 'status', 'price', 'compareAtPrice', 'sku', 'stock', 'imageUrl'];
+    const csv = [header, ...shown.map(product => {
+      const variant = product.variants?.[0];
+      return [product.title, product.handle, product.description, product.category?.name, product.status, variant?.price, variant?.compareAtPrice, variant?.sku, product.variants?.reduce((sum: number, item: any) => sum + item.inventory, 0), product.images?.[0]?.url];
+    })].map(row => row.map(csvEscape).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url; link.download = 'shree-ganesh-products.csv'; link.click();
+    URL.revokeObjectURL(url);
+    setNotice(`${shown.length} product${shown.length === 1 ? '' : 's'} exported.`);
+  };
+
+  const parseCsv = (text: string) => {
+    const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter(line => line.trim());
+    const parseLine = (line: string) => Array.from(line.matchAll(/(?:^|,)(?:"((?:[^"]|"")*)"|([^",]*))/g), match => (match[1] ?? match[2] ?? '').replace(/""/g, ''));
+    const headers = parseLine(lines[0] || '').map(header => header.trim());
+    return lines.slice(1).map(line => Object.fromEntries(headers.map((header, i) => [header, parseLine(line)[i]?.trim() || ''])));
+  };
+
+  const toNumber = (value: string) => value === '' ? undefined : Number(value);
+  const importCsv = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith('.csv')) { setNotice('Please select a CSV file.'); return; }
+    const raw = parseCsv(await file.text());
+    const rows: ProductImportRow[] = raw.map(row => ({
+      title: row.title, handle: row.handle || undefined, description: row.description || undefined, category: row.category || undefined,
+      status: row.status?.toUpperCase() as ProductImportRow['status'], price: toNumber(row.price),
+      compareAtPrice: toNumber(row.compareAtPrice), sku: row.sku || undefined, stock: toNumber(row.stock), imageUrl: row.imageUrl || undefined,
+    }));
+    startImport(async () => {
+      const result = await importProducts(rows);
+      setNotice(result.errors.length ? `${result.imported} imported, ${result.updated} updated. ${result.errors.slice(0, 2).join(' ')}` : `${result.imported} imported and ${result.updated} updated.`);
+    });
+  };
+
   return (
     <section className="adminProducts" aria-labelledby="products-title">
       <div className="adminProductsIntro" style={{ paddingBottom: '16px', borderBottom: '1px solid var(--admin-line)' }}>
@@ -29,13 +72,15 @@ export default function ProductList({ products, categories }: Props) {
           <p style={{ margin: 0, color: 'var(--admin-muted)', fontSize: '14px' }}>Manage your product catalogue, variants and inventory.</p>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
-          <button className="adminSecondaryAction" type="button" disabled>Export</button>
-          <button className="adminSecondaryAction" type="button" disabled>Import</button>
+          <button className="adminSecondaryAction" type="button" onClick={exportProducts}>Export CSV</button>
+          <button className="adminSecondaryAction" type="button" onClick={() => importInput.current?.click()} disabled={isImporting}>{isImporting ? 'Importing…' : 'Import CSV'}</button>
+          <input ref={importInput} type="file" accept=".csv,text/csv" onChange={importCsv} hidden />
           <Link href="/admin/products/new" className="adminPrimaryAction" style={{ borderRadius: 'var(--radius-md)', padding: '8px 16px' }}>
             Add product
           </Link>
         </div>
       </div>
+      {notice && <p role="status" style={{ margin: '12px 0 0', fontSize: '13px', color: 'var(--admin-muted)' }}>{notice}</p>}
       
       <div className="adminProductTools" style={{ display: 'flex', gap: '16px', padding: '16px', marginTop: '16px', background: 'var(--admin-panel)', borderRadius: 'var(--radius-md)', border: '1px solid var(--admin-line)' }}>
         <label className="adminSearch" style={{ flex: 1, margin: 0 }}>
@@ -68,7 +113,6 @@ export default function ProductList({ products, categories }: Props) {
         <table className="adminTable">
           <thead style={{ background: 'var(--admin-bg)' }}>
             <tr>
-              <th style={{ width: '40px', padding: '12px' }}><input type="checkbox" disabled /></th>
               <th>Product</th>
               <th>SKU</th>
               <th>Category</th>
@@ -87,7 +131,6 @@ export default function ProductList({ products, categories }: Props) {
               
               return (
                 <tr key={product.id}>
-                  <td style={{ padding: '12px' }}><input type="checkbox" disabled /></td>
                   <td>
                     <Link href={`/admin/products/${product.id}`} className="adminProductName" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <div style={{ width: '40px', height: '40px', background: 'var(--admin-bg)', borderRadius: '6px', border: '1px solid var(--admin-line)', display: 'grid', placeItems: 'center', fontWeight: 600, color: 'var(--admin-muted)' }}>

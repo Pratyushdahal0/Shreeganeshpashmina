@@ -9,7 +9,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "admin-secret-key-12345";
+  const secret = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
+  if (!secret) {
+    if (pathname.startsWith('/api/admin')) {
+      return NextResponse.json({ error: 'Admin authentication is not configured' }, { status: 503 });
+    }
+    return NextResponse.redirect(new URL('/admin-access-required', request.url));
+  }
   const token = await getToken({ req: request, secret });
 
   if (!token) {

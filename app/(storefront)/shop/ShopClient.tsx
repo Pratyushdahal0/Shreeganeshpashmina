@@ -15,7 +15,7 @@ export default function ShopClient({
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
   const material = searchParams.get('material');
-  const occasion = searchParams.get('occasion');
+  const query = searchParams.get('q')?.trim().toLowerCase() || '';
 
   const collection =
     filter === 'new'
@@ -30,9 +30,10 @@ export default function ShopClient({
         p =>
           (cat === 'All Pashmina' || p.category === cat) &&
           (!filter || (filter === 'new' ? p.isNew : filter === 'best' ? p.featured : true)) &&
-          (!material || p.material.toLowerCase().includes(material.toLowerCase()))
+          (!material || p.material.toLowerCase().includes(material.toLowerCase())) &&
+          (!query || [p.name, p.category, p.material, p.description].some(value => value.toLowerCase().includes(query)))
       ),
-    [initialProducts, cat, filter, material]
+    [initialProducts, cat, filter, material, query]
   );
 
   return (
@@ -62,7 +63,7 @@ export default function ShopClient({
         </div>
         {shown.length === 0 ? (
           <div style={{ padding: '60px 0', textAlign: 'center' }}>
-            <p style={{ fontSize: '18px', color: 'var(--admin-muted, #666)' }}>No products found in this category.</p>
+            <p style={{ fontSize: '18px', color: 'var(--admin-muted, #666)' }}>No products found. Try a different search or category.</p>
           </div>
         ) : (
           <div className="productGrid">

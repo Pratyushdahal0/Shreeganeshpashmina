@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Icon } from './Icons';
 import { Product, currencies, rates } from '@/lib/data';
 import { whatsappUrl } from '@/lib/whatsapp';
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 import { applyDiscountCode } from '@/lib/actions/discounts';
+import { useCurrency } from '@/components/CurrencyContext';
 
 export type CartLine = { product: Product; qty: number };
 
@@ -19,18 +20,11 @@ export default function CartDrawer({
   lines: CartLine[];
   onQty: (id: string, n: number) => void;
 }) {
-  const [currency, setCurrency] = useState<keyof typeof currencies>('USD');
+  const { currency } = useCurrency();
   const [discountCode, setDiscountCode] = useState('');
   const [discountApplied, setDiscountApplied] = useState<{ code: string; amount: number } | null>(null);
   const [discountErr, setDiscountErr] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    const sync = () => setCurrency((localStorage.getItem('sgp-currency') as keyof typeof currencies) || 'USD');
-    sync();
-    addEventListener('currencychange', sync);
-    return () => removeEventListener('currencychange', sync);
-  }, []);
 
   const subtotal = lines.reduce((s, l) => s + l.product.price * l.qty, 0);
   const discountAmount = discountApplied ? discountApplied.amount : 0;

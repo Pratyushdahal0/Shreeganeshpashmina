@@ -7,11 +7,26 @@ function toSlug(title: string) {
   return title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-export async function getArticles(status?: 'DRAFT' | 'PUBLISHED') {
+export async function getArticles(status?: 'DRAFT' | 'PUBLISHED', options?: { take?: number; includeContent?: boolean }) {
   try {
+    const includeContent = options?.includeContent ?? true;
     const articles = await prisma.journalArticle.findMany({
       where: status ? { status } : undefined,
       orderBy: { createdAt: 'desc' },
+      take: options?.take,
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        excerpt: true,
+        content: includeContent,
+        image: true,
+        author: true,
+        status: true,
+        publishedAt: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
     return { articles, error: null };
   } catch {

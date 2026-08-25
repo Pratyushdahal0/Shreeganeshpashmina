@@ -26,6 +26,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     image: firstImage?.url ?? '/images/product-shawl.jpg',
     description: product.description ?? '',
     images: product.images.length > 0 ? product.images.map(img => img.url) : ['/images/product-shawl.jpg'],
+    thumbs: product.images.length > 0 ? product.images.map(img => img.thumbUrl || img.url) : ['/images/product-shawl.jpg'],
   };
 
   return <ProductDetailClient product={formattedProduct} initialReviews={reviews} />;

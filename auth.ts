@@ -24,8 +24,12 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const envEmail = process.env.ADMIN_EMAIL || "admin@example.com";
-        const envPassword = process.env.ADMIN_PASSWORD || "adminpassword";
+        const envEmail = process.env.ADMIN_EMAIL;
+        const envPassword = process.env.ADMIN_PASSWORD;
+        if (!envEmail || !envPassword) {
+          console.error('Admin credentials are not configured. Set ADMIN_EMAIL and ADMIN_PASSWORD.');
+          return null;
+        }
 
         // Check configured admin credentials
         if (credentials.email === envEmail && credentials.password === envPassword) {
@@ -64,24 +68,6 @@ export const authOptions: NextAuthOptions = {
           }
         }
 
-        // Check DB for matching user
-        try {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: credentials.email },
-          });
-
-          if (dbUser) {
-            return {
-              id: dbUser.id,
-              email: dbUser.email,
-              name: dbUser.name,
-              role: dbUser.role,
-            };
-          }
-        } catch (e) {
-          console.error("Error authenticating against DB:", e);
-        }
-
         return null;
       },
     }),
@@ -102,7 +88,7 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "admin-secret-key-12345",
+  secret: process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);

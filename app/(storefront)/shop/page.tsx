@@ -13,7 +13,7 @@ function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][
     category: p.category?.name ?? 'Pashmina',
     material: p.description?.split('\n')[0] ?? 'Pashmina',
     price: firstVariant ? Number(firstVariant.price) : 0,
-    image: firstImage?.url ?? '/images/product-shawl.jpg',
+    image: firstImage?.thumbUrl || firstImage?.url || '/images/product-shawl.jpg',
     description: p.description ?? '',
     isNew: false,
     featured: false,

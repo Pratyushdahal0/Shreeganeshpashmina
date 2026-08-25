@@ -4,19 +4,16 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { currencies } from '@/lib/data';
+import { useCurrency, type CurrencyKey } from './CurrencyContext';
 import { Icon } from './Icons';
 
-type CurrencyKey = keyof typeof currencies;
 const regions: Record<CurrencyKey, string> = { USD: 'United States', GBP: 'United Kingdom', EUR: 'Europe / Eurozone', AUD: 'Australia', CAD: 'Canada', INR: 'India', NPR: 'Nepal' };
 
 export default function CurrencySelector() {
   const [open, setOpen] = useState(false);
-  const [currency, setCurrency] = useState<CurrencyKey>('USD');
+  const { currency, setCurrency } = useCurrency();
 
   useEffect(() => {
-    const saved = localStorage.getItem('sgp-currency') as CurrencyKey | null;
-    if (saved && saved in currencies) setCurrency(saved);
-
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpen(false);
     };
@@ -33,8 +30,6 @@ export default function CurrencySelector() {
 
   function choose(next: CurrencyKey) {
     setCurrency(next);
-    localStorage.setItem('sgp-currency', next);
-    window.dispatchEvent(new Event('currencychange'));
     setOpen(false);
   }
 

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useRef, useState } from 'react';
 
 interface ImageUploadProps {
   value: string;
@@ -19,15 +19,15 @@ export default function ImageUpload({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
     setUploading(true);
     setError(null);
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      files.forEach(file => formData.append('files', file));
 
       const res = await fetch('/api/admin/upload', {
         method: 'POST',
@@ -39,7 +39,7 @@ export default function ImageUpload({
       if (!res.ok || data.error) {
         setError(data.error || 'Upload failed');
       } else if (data.url) {
-        onChange(data.url);
+        onChange(data.thumbUrl ? data.url : data.url);
       }
     } catch (err: any) {
       setError(err?.message || 'Error uploading image');
@@ -71,7 +71,8 @@ export default function ImageUpload({
         <input
           type="file"
           ref={fileInputRef}
-          accept="image/*"
+          accept="image/jpeg,image/png,image/webp,image/avif,image/gif"
+          multiple
           onChange={handleFileChange}
           style={{ display: 'none' }}
         />
@@ -113,6 +114,7 @@ export default function ImageUpload({
           <img
             src={value}
             alt="Preview"
+            loading="lazy"
             style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             onError={e => {
               (e.target as HTMLImageElement).style.display = 'none';

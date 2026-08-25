@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import type { AdminProduct } from '@/lib/admin/products';
 import { productService } from '@/lib/admin/products';
-import ImageUpload from '../ImageUpload';
+import MultiImageUpload, { type UploadedImage } from '../MultiImageUpload';
 
 type Props = { product?: AdminProduct; categories?: { id: string; name: string }[] };
 
@@ -23,11 +23,17 @@ export default function ProductEditor({ product, categories = [] }: Props) {
   const [name, setName] = useState(product?.name || '');
   const [slug, setSlug] = useState(product?.slug || '');
   const [sku, setSku] = useState(product?.sku || '');
-  const [categoryId, setCategoryId] = useState('');
+  const [categoryId, setCategoryId] = useState(
+    categories.find(c => c.name.toLowerCase() === product?.category?.toLowerCase())?.id || ''
+  );
   const [description, setDescription] = useState(product?.description || '');
   const [price, setPrice] = useState<number | ''>(product?.price ?? 0);
   const [stock, setStock] = useState<number | ''>(product?.stock ?? 10);
-  const [imageUrl, setImageUrl] = useState<string>(product?.images?.[0] || '');
+  const [images, setImages] = useState<UploadedImage[]>(
+    product?.imageAssets?.length
+      ? product.imageAssets
+      : (product?.images || []).map(url => ({ url, thumbUrl: null }))
+  );
   const [status, setStatus] = useState<'DRAFT' | 'PUBLISHED' | 'ARCHIVED'>(
     product?.publicationStatus === 'published'
       ? 'PUBLISHED'
@@ -62,7 +68,7 @@ export default function ProductEditor({ product, categories = [] }: Props) {
           price: Number(price),
           stock: Number(stock),
           status,
-          imageUrl: imageUrl.trim() || undefined,
+          images,
         };
 
         const res = product
@@ -178,11 +184,10 @@ export default function ProductEditor({ product, categories = [] }: Props) {
             </Field>
 
             <div style={{ padding: '8px 0' }}>
-              <ImageUpload
-                label="Product Image (Upload File or Enter URL)"
-                value={imageUrl}
-                onChange={url => setImageUrl(url)}
-                placeholder="Upload image file or enter URL..."
+              <MultiImageUpload
+                label="Product photos (multiple files)"
+                value={images}
+                onChange={setImages}
               />
             </div>
 

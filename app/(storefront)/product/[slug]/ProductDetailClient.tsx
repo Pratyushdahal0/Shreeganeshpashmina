@@ -2,7 +2,8 @@
 import Image from 'next/image';
 import { currencies, rates } from '@/lib/data';
 import { useCart } from '@/components/CartContext';
-import { useEffect, useState, useTransition } from 'react';
+import { useCurrency } from '@/components/CurrencyContext';
+import { useState, useTransition } from 'react';
 import { Icon } from '@/components/Icons';
 import { whatsappUrl } from '@/lib/whatsapp';
 import { submitReview } from '@/lib/actions/reviews';
@@ -17,6 +18,7 @@ type ProductProps = {
   image: string;
   description: string;
   images: string[];
+  thumbs: string[];
 };
 
 type ReviewItem = {
@@ -37,8 +39,9 @@ export default function ProductDetailClient({
   initialReviews: ReviewItem[];
 }) {
   const { add } = useCart();
-  const [currency, setCurrency] = useState<keyof typeof currencies>('USD');
+  const { currency } = useCurrency();
   const [activeImage, setActiveImage] = useState(p.image);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   
   // Reviews state
   const [reviews, setReviews] = useState(initialReviews);
@@ -49,13 +52,6 @@ export default function ProductDetailClient({
   const [formMsg, setFormMsg] = useState<string | null>(null);
   const [formErr, setFormErr] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-
-  useEffect(() => {
-    const s = () => setCurrency((localStorage.getItem('sgp-currency') as keyof typeof currencies) || 'USD');
-    s();
-    addEventListener('currencychange', s);
-    return () => removeEventListener('currencychange', s);
-  }, []);
 
   const c = currencies[currency];
   const price = Math.round(p.price * rates[currency]);
@@ -90,38 +86,66 @@ export default function ProductDetailClient({
   return (
     <main className="productPage">
       <div className="container productDetail">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <div className="galleryMain">
+        <div className="galleryStack">
+          <div 
+            className="galleryMain" 
+            onClick={() => setLightboxOpen(true)}
+            title="Click to open photo detail view"
+          >
             <Image
               src={activeImage}
               alt={p.name}
-              width={1000}
-              height={1250}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              fill
+              sizes="(max-width:720px) 92vw, 520px"
+              priority
+              style={{ objectFit: 'cover' }}
+              onError={() => setActiveImage('/images/product-shawl.jpg')}
             />
           </div>
           {p.images.length > 1 && (
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto' }}>
+            <div className="galleryThumbs">
               {p.images.map((imgUrl, i) => (
                 <button
-                  key={i}
+                  key={imgUrl}
+                  type="button"
+                  className={activeImage === imgUrl ? 'isActive' : undefined}
                   onClick={() => setActiveImage(imgUrl)}
-                  style={{
-                    border: activeImage === imgUrl ? '2px solid #000' : '1px solid #ddd',
-                    background: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    width: '70px',
-                    height: '90px',
-                    position: 'relative',
-                  }}
                 >
-                  <Image src={imgUrl} alt="" fill style={{ objectFit: 'cover' }} />
+                  <Image
+                    src={p.thumbs[i] || imgUrl}
+                    alt=""
+                    fill
+                    sizes="72px"
+                    loading="lazy"
+                    style={{ objectFit: 'cover' }}
+                  />
                 </button>
               ))}
             </div>
           )}
         </div>
+
+        {/* Lightbox Modal */}
+        {lightboxOpen && (
+          <div className="lightboxBackdrop" onClick={() => setLightboxOpen(false)}>
+            <div className="lightboxContainer" onClick={e => e.stopPropagation()}>
+              <button 
+                type="button" 
+                className="lightboxClose" 
+                onClick={() => setLightboxOpen(false)}
+                aria-label="Close photo detail view"
+              >
+                ✕
+              </button>
+              <div className="lightboxImageContainer">
+                <img src={activeImage} alt={p.name} />
+              </div>
+              <div style={{ color: '#fff', marginTop: '16px', fontSize: '14px', letterSpacing: '.05em' }}>
+                {p.name}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="detailSticky">
           <div className="eyebrow">{p.category} · {p.material}</div>
