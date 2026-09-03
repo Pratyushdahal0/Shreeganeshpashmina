@@ -2,25 +2,56 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Icon } from './Icons';
 import CurrencySelector from './CurrencySelector';
 
+type ActiveDiscount = {
+  code: string;
+  discountType: string;
+  discountValue: number;
+  minimumSubtotal: number | null;
+};
+
 export default function Header({
   cartCount = 0,
   onCart,
+  activeDiscounts = [],
 }: {
   cartCount?: number;
   onCart: () => void;
+  activeDiscounts?: ActiveDiscount[];
 }) {
   const [shop, setShop] = useState(false);
   const [search, setSearch] = useState(false);
   const [mobile, setMobile] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [announcementIdx, setAnnouncementIdx] = useState(0);
   const router = useRouter();
+
+  // Build announcement messages: active discounts first, then defaults
+  const defaultMessages = [
+    'Worldwide delivery',
+    'WhatsApp ordering available worldwide',
+  ];
+  const discountMessages = activeDiscounts.map((d) => {
+    const isPercent = d.discountType === 'PERCENTAGE';
+    const label = isPercent ? `${d.discountValue}% off` : `$${d.discountValue} off`;
+    return `Use code ${d.code} · ${label} your order`;
+  });
+  const announcements = [...discountMessages, ...defaultMessages];
+
+  // Rotate announcement every 4 seconds when there are multiple
+  useEffect(() => {
+    if (announcements.length <= 1) return;
+    const timer = setInterval(() => {
+      setAnnouncementIdx((i) => (i + 1) % announcements.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [announcements.length]);
 
   const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -35,11 +66,38 @@ export default function Header({
 
       <div className="announcementBar">
         <div className="announcementTrack">
-          <span>Worldwide delivery</span>
-
-          <span aria-hidden="true">·</span>
-
-          <span>WhatsApp ordering available worldwide</span>
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={announcementIdx}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.4 }}
+              style={{
+                color: announcementIdx < discountMessages.length ? '#ffd97d' : 'inherit',
+                fontWeight: announcementIdx < discountMessages.length ? 600 : 'inherit',
+              }}
+            >
+              {announcements[announcementIdx]}
+            </motion.span>
+          </AnimatePresence>
+          {announcements.length > 1 && (
+            <span aria-hidden="true" style={{ display: 'flex', gap: 4 }}>
+              {announcements.map((_, i) => (
+                <span
+                  key={i}
+                  style={{
+                    display: 'inline-block',
+                    width: i === announcementIdx ? 14 : 5,
+                    height: 2,
+                    borderRadius: 1,
+                    background: i === announcementIdx ? '#fff' : 'rgba(255,255,255,.35)',
+                    transition: 'width .3s, background .3s',
+                  }}
+                />
+              ))}
+            </span>
+          )}
         </div>
       </div>
 

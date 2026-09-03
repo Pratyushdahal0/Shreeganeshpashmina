@@ -3,13 +3,23 @@ import { useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ProductCard, { type CardProduct } from '@/components/ProductCard';
 import Reveal from '@/components/Reveal';
+import PromoBanner from '@/components/PromoBanner';
+
+type ActiveDiscount = {
+  code: string;
+  discountType: string;
+  discountValue: number | string;
+  minimumSubtotal: number | string | null;
+};
 
 export default function ShopClient({
   initialProducts,
   categories,
+  activeDiscounts = [],
 }: {
   initialProducts: CardProduct[];
   categories: string[];
+  activeDiscounts?: ActiveDiscount[];
 }) {
   const [cat, setCat] = useState('All Pashmina');
   const searchParams = useSearchParams();
@@ -39,6 +49,9 @@ export default function ShopClient({
   return (
     <main className="productPage">
       <div className="container">
+        {/* Promo banner — visible when admin has active discount codes */}
+        <PromoBanner discounts={activeDiscounts} />
+
         <div className="sectionHead">
           <div>
             <div className="eyebrow">{collection.eyebrow}</div>

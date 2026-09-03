@@ -15,6 +15,48 @@ export async function getDiscounts() {
   }
 }
 
+// ── active discounts (storefront announcement bar) ────────────────────────────
+export async function getActiveDiscounts() {
+  try {
+    const now = new Date();
+    const raw = await prisma.discount.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { startsAt: null },
+          { startsAt: { lte: now } },
+        ],
+        AND: [
+          {
+            OR: [
+              { endsAt: null },
+              { endsAt: { gte: now } },
+            ],
+          },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        code: true,
+        discountType: true,
+        discountValue: true,
+        minimumSubtotal: true,
+      },
+    });
+    // Serialize Prisma Decimal → plain number so client components can receive them
+    const discounts = raw.map(d => ({
+      code: d.code,
+      discountType: d.discountType,
+      discountValue: Number(d.discountValue),
+      minimumSubtotal: d.minimumSubtotal != null ? Number(d.minimumSubtotal) : null,
+    }));
+    return { discounts, error: null };
+  } catch {
+    return { discounts: [], error: null }; // silent fallback
+  }
+}
+
+
 // ── create ────────────────────────────────────────────────────────────────────
 export async function createDiscount(data: {
   code: string;
@@ -41,6 +83,7 @@ export async function createDiscount(data: {
       },
     });
     revalidatePath('/admin/discounts');
+    revalidatePath('/'); // update storefront announcement bar
     return { discount, error: null };
   } catch (e: any) {
     if (e.code === 'P2002') return { discount: null, error: 'Discount code already exists' };
@@ -55,6 +98,7 @@ export async function toggleDiscount(id: string) {
     if (!existing) return { error: 'Discount not found' };
     await prisma.discount.update({ where: { id }, data: { isActive: !existing.isActive } });
     revalidatePath('/admin/discounts');
+    revalidatePath('/'); // update storefront announcement bar
     return { error: null };
   } catch {
     return { error: 'Failed to update discount' };
@@ -66,6 +110,7 @@ export async function deleteDiscount(id: string) {
   try {
     await prisma.discount.delete({ where: { id } });
     revalidatePath('/admin/discounts');
+    revalidatePath('/'); // update storefront announcement bar
     return { error: null };
   } catch {
     return { error: 'Failed to delete discount' };

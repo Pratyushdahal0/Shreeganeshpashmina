@@ -3,11 +3,14 @@ import Link from 'next/link';
 import { getPublishedProducts } from '@/lib/actions/products';
 import { getSiteContent } from '@/lib/actions/content';
 import { getArticles } from '@/lib/actions/journal';
+import { getActiveDiscounts } from '@/lib/actions/discounts';
 import ProductCard, { type CardProduct } from '@/components/ProductCard';
 import Reveal from '@/components/Reveal';
 import { Icon } from '@/components/Icons';
 import TextReveal from '@/components/TextReveal';
 import HeroSection from '@/components/HeroSection';
+import { products as staticProducts } from '@/lib/data';
+import PromoBanner from '@/components/PromoBanner';
 
 function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][number]): CardProduct {
   const firstVariant = p.variants[0];
@@ -27,12 +30,26 @@ function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][
 }
 
 export default async function Home() {
-  const [{ products }, homepageContent, heroBanners, { articles }] = await Promise.all([
+  const [{ products: dbProducts }, homepageContent, heroBanners, { articles }, { discounts: activeDiscounts }] = await Promise.all([
     getPublishedProducts(),
     getSiteContent('homepage'),
     getSiteContent('hero_banners'),
     getArticles('PUBLISHED'),
+    getActiveDiscounts(),
   ]);
+
+  // Fallback to static data if DB is cold or returns empty
+  const products = dbProducts.length > 0 ? dbProducts : staticProducts.map(p => ({
+    id: p.id,
+    title: p.name,
+    handle: p.slug,
+    description: p.description,
+    category: { id: '', name: p.category },
+    variants: [{ id: '', price: p.price as unknown as any, inventory: 10, sku: '' }],
+    images: [{ url: p.image, thumbUrl: p.image, alt: p.name }],
+    status: 'PUBLISHED' as const,
+    createdAt: new Date(),
+  }));
 
   const cards = products.map(toCard);
   const featured = cards.slice(0, 3);
@@ -90,6 +107,8 @@ export default async function Home() {
       {featured.length > 0 && (
         <section className="section">
           <div className="container">
+            {/* Promo banner: visible when admin has active discount codes */}
+            <PromoBanner discounts={activeDiscounts} />
             <div className="sectionHead">
               <div>
                 <div className="eyebrow">Selected pieces</div>
@@ -107,7 +126,8 @@ export default async function Home() {
       )}
 
       <section className="split">
-        <Reveal className="splitMedia">
+        {/* position:relative required for Next.js fill images */}
+        <Reveal className="splitMedia" style={{ position: 'relative' }}>
           <Image
             src={hb.craftLoomImg || '/images/craft-loom.jpg'}
             alt="Craftsperson working at a loom"
