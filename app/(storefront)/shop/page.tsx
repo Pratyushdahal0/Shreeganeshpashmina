@@ -5,9 +5,16 @@ import { products as staticProducts } from '@/lib/data';
 import { type CardProduct } from '@/components/ProductCard';
 import ShopClient from './ShopClient';
 
-function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][number]): CardProduct {
+function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][number], index: number): CardProduct {
   const firstVariant = p.variants[0];
   const firstImage = p.images[0];
+
+  const staticNew = (p as any).new ?? (p as any).isNew;
+  const staticFeatured = (p as any).featured;
+
+  const isNew = staticNew ?? (p.createdAt ? (Date.now() - new Date(p.createdAt).getTime()) < 30 * 24 * 60 * 60 * 1000 : index < 3);
+  const featured = staticFeatured ?? (index < 6);
+
   return {
     id: p.id,
     slug: p.handle,
@@ -17,8 +24,8 @@ function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][
     price: firstVariant ? Number(firstVariant.price) : 0,
     image: firstImage?.thumbUrl || firstImage?.url || '/images/product-shawl.jpg',
     description: p.description ?? '',
-    isNew: false,
-    featured: false,
+    isNew: Boolean(isNew),
+    featured: Boolean(featured),
   };
 }
 
@@ -39,9 +46,17 @@ export default async function Shop() {
     images: [{ url: p.image, thumbUrl: p.image, alt: p.name }],
     status: 'PUBLISHED' as const,
     createdAt: new Date(),
+    new: (p as any).new,
+    featured: (p as any).featured,
   }));
 
-  const cardProducts = products.map(toCard);
+  let cardProducts = products.map((p, i) => toCard(p, i));
+  if (!cardProducts.some(p => p.isNew)) {
+    cardProducts = cardProducts.map((p, i) => (i < 4 ? { ...p, isNew: true } : p));
+  }
+  if (!cardProducts.some(p => p.featured)) {
+    cardProducts = cardProducts.map((p, i) => (i < 6 ? { ...p, featured: true } : p));
+  }
   const categories = Array.from(new Set(['All Pashmina', ...cardProducts.map(p => p.category)]));
 
   return (

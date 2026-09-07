@@ -19,6 +19,54 @@ type SavedFile = {
   height: number;
 };
 
+async function uploadToCloudinary(buffer: Buffer, filename: string): Promise<string | null> {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName) return null;
+
+  try {
+    const formData = new FormData();
+    const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+    const blob = new Blob([arrayBuffer], { type: 'image/webp' });
+    formData.append('file', blob, filename);
+
+    if (uploadPreset) {
+      formData.append('upload_preset', uploadPreset);
+    } else if (apiKey && apiSecret) {
+      const timestamp = Math.floor(Date.now() / 1000).toString();
+      const crypto = await import('crypto');
+      const signature = crypto
+        .createHash('sha1')
+        .update(`timestamp=${timestamp}${apiSecret}`)
+        .digest('hex');
+      formData.append('api_key', apiKey);
+      formData.append('timestamp', timestamp);
+      formData.append('signature', signature);
+    } else {
+      return null;
+    }
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!res.ok) {
+      console.error('Cloudinary upload status error:', res.status, await res.text());
+      return null;
+    }
+
+    const data = await res.json();
+    return data.secure_url || data.url || null;
+  } catch (err) {
+    console.error('Cloudinary upload error:', err);
+    return null;
+  }
+}
+
 async function saveProcessed(file: File, uploadsDir: string): Promise<SavedFile> {
   assertUploadable({ type: file.type, name: file.name, size: file.size });
 
@@ -30,14 +78,35 @@ async function saveProcessed(file: File, uploadsDir: string): Promise<SavedFile>
   const displayName = `${stem}.webp`;
   const thumbName = `${stem}_thumb.webp`;
 
-  await Promise.all([
-    writeFile(path.join(uploadsDir, displayName), processed.display),
-    writeFile(path.join(uploadsDir, thumbName), processed.thumb),
-  ]);
+  let url = `/uploads/${displayName}`;
+  let thumbUrl = `/uploads/${thumbName}`;
+
+  try {
+    await mkdir(uploadsDir, { recursive: true });
+    await Promise.all([
+      writeFile(path.join(uploadsDir, displayName), processed.display),
+      writeFile(path.join(uploadsDir, thumbName), processed.thumb),
+    ]);
+  } catch (fsErr: any) {
+    console.warn('Local disk upload failed (read-only filesystem):', fsErr?.message);
+
+    // 1. Try Cloudinary upload if configured
+    const cloudUrl = await uploadToCloudinary(processed.display, displayName);
+    const cloudThumbUrl = await uploadToCloudinary(processed.thumb, thumbName);
+
+    if (cloudUrl) {
+      url = cloudUrl;
+      thumbUrl = cloudThumbUrl || cloudUrl;
+    } else {
+      // 2. Fallback to optimized WebP Data URL for zero-config serverless compatibility
+      url = `data:image/webp;base64,${processed.display.toString('base64')}`;
+      thumbUrl = `data:image/webp;base64,${processed.thumb.toString('base64')}`;
+    }
+  }
 
   return {
-    url: `/uploads/${displayName}`,
-    thumbUrl: `/uploads/${thumbName}`,
+    url,
+    thumbUrl,
     mimeType: processed.mimeType,
     size: processed.displaySize,
     width: processed.width,

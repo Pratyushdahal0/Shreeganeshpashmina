@@ -12,9 +12,16 @@ import HeroSection from '@/components/HeroSection';
 import { products as staticProducts } from '@/lib/data';
 import PromoBanner from '@/components/PromoBanner';
 
-function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][number]): CardProduct {
+function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][number], index: number): CardProduct {
   const firstVariant = p.variants[0];
   const firstImage = p.images[0];
+
+  const staticNew = (p as any).new ?? (p as any).isNew;
+  const staticFeatured = (p as any).featured;
+
+  const isNew = staticNew ?? (p.createdAt ? (Date.now() - new Date(p.createdAt).getTime()) < 30 * 24 * 60 * 60 * 1000 : index < 3);
+  const featured = staticFeatured ?? (index < 6);
+
   return {
     id: p.id,
     slug: p.handle,
@@ -24,8 +31,8 @@ function toCard(p: Awaited<ReturnType<typeof getPublishedProducts>>['products'][
     price: firstVariant ? Number(firstVariant.price) : 0,
     image: firstImage?.thumbUrl || firstImage?.url || '/images/product-shawl.jpg',
     description: p.description ?? '',
-    isNew: false,
-    featured: false,
+    isNew: Boolean(isNew),
+    featured: Boolean(featured),
   };
 }
 
@@ -49,11 +56,21 @@ export default async function Home() {
     images: [{ url: p.image, thumbUrl: p.image, alt: p.name }],
     status: 'PUBLISHED' as const,
     createdAt: new Date(),
+    new: (p as any).new,
+    featured: (p as any).featured,
   }));
 
-  const cards = products.map(toCard);
-  const featured = cards.slice(0, 3);
-  const bestSellers = cards.slice(0, 6);
+  let cards = products.map((p, i) => toCard(p, i));
+  if (!cards.some(p => p.isNew)) {
+    cards = cards.map((p, i) => (i < 4 ? { ...p, isNew: true } : p));
+  }
+  if (!cards.some(p => p.featured)) {
+    cards = cards.map((p, i) => (i < 6 ? { ...p, featured: true } : p));
+  }
+
+  const newArrivals = cards.filter(c => c.isNew).slice(0, 3);
+  const featured = newArrivals.length > 0 ? newArrivals : cards.slice(0, 3);
+  const bestSellers = cards.filter(c => c.featured).slice(0, 6);
   const latestArticles = articles.slice(0, 3);
 
   const hc = homepageContent.data;
@@ -114,7 +131,7 @@ export default async function Home() {
                 <div className="eyebrow">Selected pieces</div>
                 <h2>New arrivals</h2>
               </div>
-              <Link className="btn" href="/shop">View collection <Icon name="arrow" /></Link>
+              <Link className="btn" href="/shop?filter=new">View collection <Icon name="arrow" /></Link>
             </div>
             <div className="productGrid">
               {featured.map(p => (
@@ -154,7 +171,7 @@ export default async function Home() {
                 <div className="eyebrow">The edit</div>
                 <h2>Best sellers</h2>
               </div>
-              <Link className="btn" href="/shop">Shop best sellers <Icon name="arrow" /></Link>
+              <Link className="btn" href="/shop?filter=best">Shop best sellers <Icon name="arrow" /></Link>
             </div>
             <div className="productGrid">
               {bestSellers.map(p => (
