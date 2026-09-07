@@ -87,7 +87,9 @@ export default function Analytics() {
               <p>{m.label}</p>
               <strong>
                 {m.value === null ? '—' :
-                  m.label.toLowerCase().includes('revenue') || m.label.toLowerCase().includes('value')
+                  typeof m.value === 'string'
+                    ? m.value
+                    : m.label.toLowerCase().includes('revenue') || m.label.toLowerCase().includes('profit') || m.label.toLowerCase().includes('cogs') || m.label.toLowerCase().includes('value')
                     ? `$${Number(m.value).toFixed(2)}`
                     : m.value
                 }
@@ -97,6 +99,36 @@ export default function Analytics() {
           ))
         )}
       </section>
+
+      {/* Profit & Loss Breakdown Card */}
+      {data?.pnlSummary && (
+        <section className="adminPanel" style={{ margin: '20px 0' }}>
+          <div className="adminPanelHeading">
+            <div>
+              <p className="adminEyebrow">Financial Statement</p>
+              <h2>Profit &amp; Loss Statement ({preset})</h2>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', padding: '16px' }}>
+            <div style={{ padding: '16px', background: 'var(--admin-subtle, #f9f9f9)', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--admin-muted)' }}>Gross Sales / Revenue</p>
+              <h3 style={{ margin: '8px 0 0', fontSize: '20px', color: '#16a34a' }}>${data.pnlSummary.revenue.toFixed(2)}</h3>
+            </div>
+            <div style={{ padding: '16px', background: 'var(--admin-subtle, #f9f9f9)', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--admin-muted)' }}>Cost of Goods Sold (COGS)</p>
+              <h3 style={{ margin: '8px 0 0', fontSize: '20px', color: '#dc2626' }}>-${data.pnlSummary.cogs.toFixed(2)}</h3>
+            </div>
+            <div style={{ padding: '16px', background: 'var(--admin-subtle, #f9f9f9)', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--admin-muted)' }}>Estimated Net Profit</p>
+              <h3 style={{ margin: '8px 0 0', fontSize: '20px', color: '#0284c7' }}>${data.pnlSummary.grossProfit.toFixed(2)}</h3>
+            </div>
+            <div style={{ padding: '16px', background: 'var(--admin-subtle, #f9f9f9)', borderRadius: '8px' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--admin-muted)' }}>Profit Margin</p>
+              <h3 style={{ margin: '8px 0 0', fontSize: '20px' }}>{data.pnlSummary.grossMarginPercent}%</h3>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Sales by period chart (simple text table) */}
       <div className="adminAnalyticsGrid">

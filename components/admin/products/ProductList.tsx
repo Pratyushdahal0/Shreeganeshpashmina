@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { ChangeEvent, useMemo, useRef, useState, useTransition } from 'react';
-import { importProducts, type ProductImportRow } from '@/lib/actions/products';
+import { importProducts, updateProduct, type ProductImportRow } from '@/lib/actions/products';
+import { createOrder } from '@/lib/actions/orders';
 
 type ProductSort = 'name-asc' | 'price-asc' | 'price-desc';
 type Props = { products: any[]; categories: string[] };
@@ -151,7 +152,51 @@ export default function ProductList({ products, categories }: Props) {
                     </span>
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <Link href={`/admin/products/${product.id}`} style={{ color: 'var(--admin-muted)', textDecoration: 'none', fontWeight: 500, fontSize: '13px' }}>Edit</Link>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        className="adminSecondaryAction"
+                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                        onClick={() => {
+                          const newPrice = prompt(`Update price for ${product.title}:`, price.toString());
+                          if (newPrice && !isNaN(Number(newPrice))) {
+                            startImport(async () => {
+                              const res = await updateProduct(product.id, { price: Number(newPrice) });
+                              if (res.error) setNotice(`Error: ${res.error}`);
+                              else setNotice(`Price updated to $${newPrice} for ${product.title}`);
+                            });
+                          }
+                        }}
+                      >
+                        Quick Price
+                      </button>
+
+                      <button
+                        type="button"
+                        className="adminPrimaryAction"
+                        style={{ padding: '4px 8px', fontSize: '12px' }}
+                        onClick={() => {
+                          const qtyStr = prompt(`Enter quantity sold for ${product.title}:`, '1');
+                          if (qtyStr && !isNaN(Number(qtyStr)) && Number(qtyStr) > 0) {
+                            const qty = Number(qtyStr);
+                            const customerEmail = prompt('Customer Email (or leave default):', 'store-sale@shreeganesh.com') || 'store-sale@shreeganesh.com';
+                            startImport(async () => {
+                              const res = await createOrder({
+                                customerEmail,
+                                total: price * qty,
+                                items: [{ productId: product.id, variantId: variant?.id, quantity: qty, price }],
+                              });
+                              if (res.error) setNotice(`Error: ${res.error}`);
+                              else setNotice(`Recorded sale of ${qty}x ${product.title} ($${(price * qty).toFixed(2)})! Analytics updated.`);
+                            });
+                          }
+                        }}
+                      >
+                        Record Sale
+                      </button>
+
+                      <Link href={`/admin/products/${product.id}`} style={{ color: 'var(--admin-muted)', textDecoration: 'none', fontWeight: 500, fontSize: '13px', alignSelf: 'center' }}>Edit</Link>
+                    </div>
                   </td>
                 </tr>
               )

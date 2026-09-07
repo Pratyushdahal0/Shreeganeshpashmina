@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import ProductCard, { type CardProduct } from '@/components/ProductCard';
 import Reveal from '@/components/Reveal';
@@ -21,11 +21,20 @@ export default function ShopClient({
   categories: string[];
   activeDiscounts?: ActiveDiscount[];
 }) {
-  const [cat, setCat] = useState('All Pashmina');
   const searchParams = useSearchParams();
   const filter = searchParams.get('filter');
   const material = searchParams.get('material');
+  const categoryParam = searchParams.get('category');
   const query = searchParams.get('q')?.trim().toLowerCase() || '';
+
+  const [cat, setCat] = useState(categoryParam || 'All Pashmina');
+
+  // Keep selected category tab in sync if user clicks a header navigation link
+  useEffect(() => {
+    if (categoryParam) {
+      setCat(categoryParam);
+    }
+  }, [categoryParam]);
 
   const collection =
     filter === 'new'

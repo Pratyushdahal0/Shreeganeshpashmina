@@ -53,6 +53,11 @@ export async function getSalesAnalytics(preset: DatePreset = 'last30days') {
     const orderCount = ordersInRange.length;
     const avgOrderValue = orderCount > 0 ? revenue / orderCount : 0;
 
+    // Estimate Cost of Goods Sold (COGS) at ~40% for Pashmina/Cashmere manufacturing
+    const estimatedCogs = revenue * 0.4;
+    const grossProfit = revenue - estimatedCogs;
+    const grossMarginPercent = revenue > 0 ? Math.round((grossProfit / revenue) * 100) : 0;
+
     // Sales by product
     const productMap: Record<string, { title: string; total: number }> = {};
     for (const order of ordersInRange) {
@@ -79,11 +84,20 @@ export async function getSalesAnalytics(preset: DatePreset = 'last30days') {
 
     return {
       metrics: {
-        revenue: { label: 'Revenue', value: revenue, change: null },
+        revenue: { label: 'Total Revenue', value: revenue, change: null },
+        grossProfit: { label: 'Gross Profit (P&L)', value: grossProfit, change: null },
+        cogs: { label: 'Estimated COGS (40%)', value: estimatedCogs, change: null },
+        grossMargin: { label: 'Gross Margin', value: `${grossMarginPercent}%`, change: null },
         orders: { label: 'Orders', value: orderCount, change: null },
         avgOrderValue: { label: 'Avg order value', value: avgOrderValue, change: null },
         totalOrders: { label: 'Total orders (all time)', value: totalOrders, change: null },
         totalCustomers: { label: 'Total customers', value: totalCustomers, change: null },
+      },
+      pnlSummary: {
+        revenue,
+        cogs: estimatedCogs,
+        grossProfit,
+        grossMarginPercent,
       },
       salesByPeriod,
       salesByProduct,
