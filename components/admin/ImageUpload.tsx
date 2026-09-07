@@ -34,10 +34,17 @@ export default function ImageUpload({
         body: formData,
       });
 
-      const data = await res.json();
+      let data: any = {};
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        data = { error: text.slice(0, 150) || `Server error (${res.status} ${res.statusText})` };
+      }
 
       if (!res.ok || data.error) {
-        setError(data.error || 'Upload failed');
+        setError(data.error || `Upload failed with status ${res.status}`);
       } else if (data.url) {
         onChange(data.thumbUrl ? data.url : data.url);
       }
