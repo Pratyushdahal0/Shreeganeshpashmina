@@ -8,8 +8,8 @@ import PromoBanner from '@/components/PromoBanner';
 type ActiveDiscount = {
   code: string;
   discountType: string;
-  discountValue: number | string;
-  minimumSubtotal: number | string | null;
+  discountValue: number;
+  minimumSubtotal: number | null;
 };
 
 export default function ShopClient({

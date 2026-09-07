@@ -1,6 +1,7 @@
 'use server';
 
 import prisma from '@/lib/db';
+import { ProductStatus } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 
 export type ProductImageInput = {
@@ -66,7 +67,7 @@ export async function getProducts() {
 export async function getPublishedProducts() {
   try {
     const products = await prisma.product.findMany({
-      where: { status: 'PUBLISHED' },
+      where: { status: ProductStatus.PUBLISHED },
       select: productCardSelect,
       orderBy: { createdAt: 'desc' },
     });
